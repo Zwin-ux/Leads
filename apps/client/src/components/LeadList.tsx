@@ -8,6 +8,7 @@ import AddLeadForm from './AddLeadForm';
 import DropZone from './DropZone';
 import logo from '../assets/ampac-logo-v2.png';
 import { LeadGenerator } from './LeadGenerator';
+import TransferLeadModal from './TransferLeadModal';
 
 const LeadList: React.FC = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -15,6 +16,7 @@ const LeadList: React.FC = () => {
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+    const [leadToTransfer, setLeadToTransfer] = useState<Lead | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator'>('list');
     const [selectedOwner, setSelectedOwner] = useState<string>('All');
 
@@ -96,6 +98,49 @@ const LeadList: React.FC = () => {
         }
     };
 
+    const handleTransfer = async (leadId: string, newOwner: string, message: string, type: 'transfer' | 'collaborate') => {
+        const lead = leads.find(l => l.id === leadId);
+        if (!lead) return;
+
+        let updatedLead = { ...lead };
+
+        if (type === 'transfer') {
+            updatedLead.owner = newOwner;
+            updatedLead.notes = [
+                {
+                    id: crypto.randomUUID(),
+                    content: `System: Transferred to ${newOwner}. Note: ${message}`,
+                    timestamp: new Date().toISOString(),
+                    author: 'System',
+                    type: 'SystemEvent'
+                },
+                ...(updatedLead.notes || [])
+            ];
+        } else {
+            // Collaborate logic (just add a note for now as schema update is complex)
+            updatedLead.notes = [
+                {
+                    id: crypto.randomUUID(),
+                    content: `System: Added ${newOwner} as collaborator. Note: ${message}`,
+                    timestamp: new Date().toISOString(),
+                    author: 'System',
+                    type: 'SystemEvent'
+                },
+                ...(updatedLead.notes || [])
+            ];
+        }
+
+        try {
+            const saved = await apiService.updateLead(updatedLead);
+            setLeads(leads.map(l => l.id === saved.id ? saved : l));
+            setLeadToTransfer(null);
+            alert(type === 'transfer' ? `Lead transferred to ${newOwner}` : `${newOwner} added as collaborator`);
+        } catch (err) {
+            console.error("Failed to transfer lead", err);
+            alert("Failed to transfer lead");
+        }
+    };
+
     const filteredLeads = selectedOwner === 'All'
         ? leads
         : leads.filter(l => l.owner === selectedOwner);
@@ -165,6 +210,14 @@ const LeadList: React.FC = () => {
             {showAdd && <AddLeadForm onAdd={handleAdd} onCancel={() => setShowAdd(false)} />}
             {showImport && <DropZone onImport={handleImport} onCancel={() => setShowImport(false)} />}
 
+            {leadToTransfer && (
+                <TransferLeadModal
+                    lead={leadToTransfer}
+                    onClose={() => setLeadToTransfer(null)}
+                    onTransfer={handleTransfer}
+                />
+            )}
+
             {selectedLead && (
                 <LeadDetailModal
                     lead={selectedLead}
@@ -197,7 +250,20 @@ const LeadList: React.FC = () => {
                                 </span>
                             </div>
                             <p className="company">{lead.company}</p>
-                            {lead.owner && <div className="owner-tag" style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem' }}>👤 {lead.owner}</div>}
+                            <div className="card-meta-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                                {lead.owner && <div className="owner-tag" style={{ fontSize: '0.75rem', color: '#64748b' }}>👤 {lead.owner}</div>}
+                                <button
+                                    className="icon-btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setLeadToTransfer(lead);
+                                    }}
+                                    title="Transfer Lead"
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
+                                >
+                                    ➡️
+                                </button>
+                            </div>
                             <div className="card-footer">
                                 <span className="last-contact">Last: {lead.lastContactDate}</span>
                                 {lead.nextAction && <span className="next-action">👉 {lead.nextAction}</span>}
