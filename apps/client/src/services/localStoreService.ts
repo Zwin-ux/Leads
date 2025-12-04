@@ -70,7 +70,11 @@ export class LocalStoreService {
     // --- Real AI Calls ---
 
     async generateEmail(lead: Lead): Promise<string> {
+        // Try the brain service first, fall back to local template
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
             const response = await fetch(`${BRAIN_SERVICE_URL}/v1/agents/trigger`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -81,16 +85,40 @@ export class LocalStoreService {
                         type: "intro",
                         context: `Write a professional intro email for ${lead.firstName} from ${lead.company}. Program: ${lead.loanProgram || 'SBA'}.`
                     }
-                })
+                }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) throw new Error("AI Service failed");
             const data = await response.json();
-            return data.content || "Could not generate email.";
+            return data.content || this.getLocalEmailTemplate(lead);
         } catch (e) {
-            console.error("AI Error:", e);
-            return "Error connecting to AI Brain. Please check CORS or service status.";
+            console.warn("AI Brain unavailable, using local template:", e);
+            return this.getLocalEmailTemplate(lead);
         }
+    }
+
+    private getLocalEmailTemplate(lead: Lead): string {
+        const program = lead.loanProgram || 'SBA 504';
+        const firstName = lead.firstName || 'there';
+        const company = lead.company || 'your business';
+
+        return `Hi ${firstName},
+
+I hope this message finds you well! I came across ${company} and was impressed by what you've built.
+
+I'm reaching out from AmPac Business Capital — we specialize in ${program} loans and help business owners like yourself access capital for growth, real estate, and equipment.
+
+Would you be open to a brief call this week to explore if this might be a fit for your goals?
+
+Looking forward to connecting.
+
+Best regards,
+[Your Name]
+AmPac Business Capital
+📞 [Your Phone]`;
     }
 
     async analyzeDeal(lead: Lead): Promise<string> {
