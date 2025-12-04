@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Lead, Banker } from '@leads/shared';
 import { bankerService } from '../services/bankerService';
+import { apiService } from '../services/apiService';
 
 interface LeadDetailModalProps {
     lead: Lead;
@@ -55,38 +56,12 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 ? `${editedLead.businessName || editedLead.company} ${editedLead.city || ''} business`
                 : `${referringBanker?.name} ${referringBanker?.bank} banker`;
 
-            const response = await fetch('/api/research', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query, type })
-            });
+            const data = await apiService.research(query, type);
 
-            if (response.ok) {
-                const data = await response.json();
-                if (type === 'business') setBusinessResearch(data);
-                else setBankerResearch(data);
-            } else {
-                throw new Error("API failed");
-            }
+            if (type === 'business') setBusinessResearch(data);
+            else setBankerResearch(data);
         } catch (err) {
-            console.warn("Research API failed, falling back to mock", err);
-            // Fallback Mock
-            setTimeout(() => {
-                if (type === 'business') {
-                    setBusinessResearch({
-                        summary: `${editedLead.businessName || editedLead.company} is a leading provider in the ${editedLead.industry || 'local'} sector.`,
-                        headcount: "10-50 employees",
-                        flags: ["Recent office expansion", "No lawsuits found"],
-                        news: "Featured in local business journal last month."
-                    });
-                } else {
-                    setBankerResearch({
-                        winRate: "85%",
-                        speed: "Fast (21 days avg)",
-                        leverage: "Loves 504 construction deals. Often waives points for repeat clients."
-                    });
-                }
-            }, 1000);
+            console.warn("Research failed", err);
         } finally {
             setIsGenerating(false);
         }

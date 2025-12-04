@@ -83,6 +83,19 @@ export class ApiService {
         const data = await response.json();
         return data.analysis;
     }
+
+    async research(query: string, type: 'business' | 'banker'): Promise<any> {
+        if (IS_DEMO) return localStoreService.research(query, type);
+
+        const response = await fetch(`${API_URL}/research`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, type })
+        });
+
+        if (!response.ok) throw new Error("Research API failed");
+        return await response.json();
+    }
 }
 
 export const apiService = new ApiService();

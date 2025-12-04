@@ -108,6 +108,23 @@ export class LocalStoreService {
             return "Error connecting to AI Brain. Please check CORS or service status.";
         }
     }
+    async research(query: string, type: 'business' | 'banker'): Promise<any> {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        if (type === 'business') {
+            return {
+                summary: `${query} is a leading provider in the local sector.`,
+                headcount: "10-50 employees",
+                flags: ["Recent office expansion", "No lawsuits found"],
+                news: "Featured in local business journal last month."
+            };
+        } else {
+            return {
+                winRate: "85%",
+                speed: "Fast (21 days avg)",
+                leverage: "Loves 504 construction deals. Often waives points for repeat clients."
+            };
+        }
+    }
 }
 
 export const localStoreService = new LocalStoreService();
