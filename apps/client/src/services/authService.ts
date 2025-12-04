@@ -7,15 +7,22 @@ export interface User {
 export const TEAM_MEMBERS: User[] = [
     { name: "Hilda Kennedy", email: "HKennedy@ampac.com", title: "Founder/President" },
     { name: "Ed Ryan", email: "ERyan@ampac.com", title: "EVP, Director of 504 Sales" },
-    { name: "Ahmed Zwin", email: "AZwin@ampac.com", title: "EVP, Director of GGLP" },
-    { name: "Janine Warren", email: "JWarren@ampac.com", title: "EVP, Director of Loan Integration" },
+    { name: "Ahmed Zwin", email: "AZwin@ampac.com", title: "EVP, Director of Government Guaranteed Loan Programs" },
+    { name: "Janine Warren", email: "JWarren@ampac.com", title: "EVP, Director of Loan Integration, Marketing & Training" },
     { name: "Brian Kennedy, Jr", email: "BKennedy@ampac.com", title: "Entrepreneur Ecosystem Director" },
-    { name: "Jeff Sceranka", email: "JSceranka@ampac.com", title: "EVP, New Markets" },
+    { name: "Jeff Sceranka", email: "JSceranka@ampac.com", title: "EVP, New Markets and Business Development" },
     { name: "Julie Silvio", email: "JSilvio@ampac.com", title: "EVP, Chief Credit Officer" },
     { name: "Jennifer Salazar", email: "JSalazar@ampac.com", title: "Senior Loan Administrator" },
     { name: "Brandon Sellers", email: "BSellers@ampac.com", title: "SVP, IT & Grants Administrator" },
     { name: "Nicole J. Jones", email: "NJones@ampac.com", title: "EVP, Chief Development & Innovation Director" },
     { name: "Kaiesha Davidson", email: "KDavidson@ampac.com", title: "Sr. Accountant" },
+    { name: "Jaime Rodriguez", email: "JRodriguez@ampac.com", title: "SVP, SBA 504 Specialist" },
+    { name: "Erik Iwashika", email: "EIwashika@ampac.com", title: "VP, SBA 504 Specialist" },
+    { name: "Lucas Sceranka", email: "LSceranka@ampac.com", title: "VP, SBA 504 Specialist" },
+    { name: "Ronnie Sylvia", email: "RSylvia@ampac.com", title: "VP, SBA 504 Specialist" },
+    { name: "Ian Aguilar", email: "IAguilar@ampac.com", title: "Business Development Associate" },
+    { name: "Mark Morales", email: "MMorales@ampac.com", title: "SVP, Community Lending & 504 Specialist" },
+    { name: "Hunter Bell", email: "HBell@ampac.com", title: "AVP, Business Development Officer" },
     { name: "Mazen Zwin", email: "MZwin@ampac.com", title: "Developer" }
 ];
 
