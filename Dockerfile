@@ -14,5 +14,7 @@ FROM node:18-alpine
 WORKDIR /app
 RUN npm install -g serve
 COPY --from=build /app/apps/client/dist ./dist
+# Create a minimal package.json so 'npm start' works (Railway default)
+RUN echo '{"scripts": {"start": "serve -s dist -l 3000"}}' > package.json
 EXPOSE 3000
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["npm", "start"]
