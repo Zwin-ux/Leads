@@ -11,9 +11,10 @@ interface LeadDetailModalProps {
 const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate }) => {
     const [editedLead, setEditedLead] = useState<Lead>(lead);
     const [referringBanker, setReferringBanker] = useState<Banker | undefined>(undefined);
-    const [activeTab, setActiveTab] = useState<'snapshot' | 'research' | 'notes'>('snapshot');
     const [emailDraft, setEmailDraft] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [businessResearch, setBusinessResearch] = useState<{ summary: string; headcount: string; flags: string[]; news: string } | null>(null);
+    const [bankerResearch, setBankerResearch] = useState<{ winRate: string; speed: string; leverage: string } | null>(null);
 
     useEffect(() => {
         if (lead.bankerId) {
@@ -158,111 +159,74 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                     <span className="data-value">{editedLead.lastContact?.outcome || '-'}</span>
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'research' && (
-                        <div className="ai-panel">
-                            <div className="ai-tools-grid">
-                                <button className="ai-tool-btn" onClick={() => alert("Searching Google, LinkedIn, and OpenGov...")}>
-                                    <span className="ai-tool-icon">🔍</span>
-                                    <div className="ai-tool-text">
-                                        <span className="ai-tool-title">Research Business</span>
-                                        <span className="ai-tool-desc">Web, News, Red Flags</span>
-                                    </div>
-                                </button>
-                                <button className="ai-tool-btn" onClick={() => alert("Analyzing Banker Win Rate and Preferences...")}>
-                                    <span className="ai-tool-icon">🏦</span>
-                                    <div className="ai-tool-text">
-                                        <span className="ai-tool-title">Research Banker</span>
-                                        <span className="ai-tool-desc">Leverage & History</span>
-                                    </div>
-                                </button>
-                            </div>
-
-                            <div className="email-composer">
-                                <h3>AI Email Drafter</h3>
-                                <div className="composer-actions" style={{ marginBottom: '1rem', marginTop: 0 }}>
-                                    <button className="secondary" onClick={() => handleGenerateEmail('intro')} disabled={isGenerating}>Borrower Intro</button>
-                                    <button className="secondary" onClick={() => handleGenerateEmail('update')} disabled={isGenerating}>Banker Update</button>
-                                    <button className="secondary" onClick={() => handleGenerateEmail('voicemail')} disabled={isGenerating}>Voicemail Follow-up</button>
-                                </div>
-
-                                {isGenerating && <p style={{ color: '#059669' }}>Brain is writing...</p>}
-
-                                {emailDraft && (
-                                    <>
-                                        <textarea
-                                            value={emailDraft}
-                                            onChange={e => setEmailDraft(e.target.value)}
-                                            rows={8}
+                            rows={8}
                                         />
-                                        <div className="composer-actions">
-                                            <button
-                                                className="primary"
-                                                onClick={() => {
-                                                    const subject = encodeURIComponent(`Follow up: ${editedLead.businessName}`);
-                                                    window.location.href = `mailto:${editedLead.email}?subject=${subject}&body=${encodeURIComponent(emailDraft)}`;
-                                                }}
-                                            >
-                                                Open in Outlook
-                                            </button>
-                                            <button className="secondary" onClick={() => setEmailDraft(null)}>Discard</button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'notes' && (
-                        <div className="notes-tab">
-                            <div className="notes-list">
-                                {editedLead.notes?.map(note => (
-                                    <div key={note.id} className={`note-item ${note.type}`}>
-                                        <div className="note-header">
-                                            <span className="note-author">{note.author}</span>
-                                            <span className="note-time">{new Date(note.timestamp).toLocaleString()}</span>
-                                        </div>
-                                        <div className="note-content">{note.content}</div>
-                                    </div>
-                                ))}
-                                {(!editedLead.notes || editedLead.notes.length === 0) && (
-                                    <p className="no-notes">No notes yet.</p>
-                                )}
-                            </div>
-                            <div className="add-note">
-                                <textarea
-                                    placeholder="Add a note..."
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            const content = e.currentTarget.value;
-                                            if (!content.trim()) return;
-
-                                            const newNote = {
-                                                id: Date.now().toString(),
-                                                content,
-                                                timestamp: new Date().toISOString(),
-                                                author: 'You',
-                                                type: 'UserNote' as const
-                                            };
-
-                                            setEditedLead({
-                                                ...editedLead,
-                                                notes: [newNote, ...(editedLead.notes || [])]
-                                            });
-                                            e.currentTarget.value = '';
-                                        }
+                            <div className="composer-actions">
+                                <button
+                                    className="primary"
+                                    onClick={() => {
+                                        const subject = encodeURIComponent(`Follow up: ${editedLead.businessName}`);
+                                        window.location.href = `mailto:${editedLead.email}?subject=${subject}&body=${encodeURIComponent(emailDraft)}`;
                                     }}
-                                />
-                                <p className="hint">Press Enter to add note</p>
+                                >
+                                    Open in Outlook
+                                </button>
+                                <button className="secondary" onClick={() => setEmailDraft(null)}>Discard</button>
                             </div>
-                        </div>
+                        </>
                     )}
                 </div>
             </div>
+                    )}
+
+            {activeTab === 'notes' && (
+                <div className="notes-tab">
+                    <div className="notes-list">
+                        {editedLead.notes?.map(note => (
+                            <div key={note.id} className={`note-item ${note.type}`}>
+                                <div className="note-header">
+                                    <span className="note-author">{note.author}</span>
+                                    <span className="note-time">{new Date(note.timestamp).toLocaleString()}</span>
+                                </div>
+                                <div className="note-content">{note.content}</div>
+                            </div>
+                        ))}
+                        {(!editedLead.notes || editedLead.notes.length === 0) && (
+                            <p className="no-notes">No notes yet.</p>
+                        )}
+                    </div>
+                    <div className="add-note">
+                        <textarea
+                            placeholder="Add a note..."
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    const content = e.currentTarget.value;
+                                    if (!content.trim()) return;
+
+                                    const newNote = {
+                                        id: Date.now().toString(),
+                                        content,
+                                        timestamp: new Date().toISOString(),
+                                        author: 'You',
+                                        type: 'UserNote' as const
+                                    };
+
+                                    setEditedLead({
+                                        ...editedLead,
+                                        notes: [newNote, ...(editedLead.notes || [])]
+                                    });
+                                    e.currentTarget.value = '';
+                                }
+                            }}
+                        />
+                        <p className="hint">Press Enter to add note</p>
+                    </div>
+                </div>
+            )}
         </div>
+            </div >
+        </div >
     );
 };
 

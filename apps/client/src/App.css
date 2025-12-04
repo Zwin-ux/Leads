@@ -771,3 +771,94 @@ textarea:focus {
   border: 1px solid #fecaca;
   text-align: center;
 }
+
+/* Research Results */
+.research-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  animation: fadeIn 0.5s ease;
+}
+
+.result-card {
+  background: #f0fdf4;
+  /* Light Green Tint */
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.result-card h4 {
+  color: var(--color-primary);
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #bbf7d0;
+  padding-bottom: 0.5rem;
+}
+
+.result-card p {
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-text);
+}
+
+.flags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.flag-chip {
+  background: #ffffff;
+  border: 1px solid #bbf7d0;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+}
+
+.stat-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.stat span {
+  font-weight: 700;
+  color: var(--color-primary);
+  font-size: 1.1rem;
+}
+
+.leverage-note {
+  font-style: italic;
+  color: var(--color-text-muted);
+  background: #ffffff;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  border: 1px solid #e2e8f0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
