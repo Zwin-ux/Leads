@@ -1,0 +1,8 @@
+{
+  "name": "lead-sheets-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

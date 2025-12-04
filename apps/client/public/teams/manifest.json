@@ -1,0 +1,44 @@
+{
+    "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+    "manifestVersion": "1.16",
+    "version": "1.0.0",
+    "id": "c39c2d90-2d90-4d90-902d-902d902d902d",
+    "packageName": "com.ampac.leadsheets",
+    "developer": {
+        "name": "AmPac",
+        "websiteUrl": "https://www.ampac.com",
+        "privacyUrl": "https://www.ampac.com/privacy",
+        "termsOfUseUrl": "https://www.ampac.com/terms"
+    },
+    "icons": {
+        "color": "color.png",
+        "outline": "outline.png"
+    },
+    "name": {
+        "short": "Lead Sheets",
+        "full": "Lead Sheets for AmPac"
+    },
+    "description": {
+        "short": "Follow-up engine for AmPac BDOs.",
+        "full": "Lead Sheets binds Excel, Outlook, and Teams together for efficient lead management."
+    },
+    "accentColor": "#FFFFFF",
+    "staticTabs": [
+        {
+            "entityId": "leadsToday",
+            "name": "Today",
+            "contentUrl": "https://localhost:3000/index.html?context=teams",
+            "websiteUrl": "https://localhost:3000/index.html",
+            "scopes": [
+                "personal"
+            ]
+        }
+    ],
+    "permissions": [
+        "identity",
+        "messageTeamMembers"
+    ],
+    "validDomains": [
+        "localhost"
+    ]
+}
