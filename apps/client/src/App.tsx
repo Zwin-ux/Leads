@@ -3,7 +3,7 @@ import { authService } from "./services/authService";
 import type { User } from "./services/authService";
 import LeadDetail from "./components/LeadDetail";
 import LeadList from "./components/LeadList";
-import OrgCard from "./components/OrgCard";
+
 import './App.css';
 
 function App() {
