@@ -44,27 +44,27 @@ export const mockBankers: Banker[] = [
 
 export const mockLeads: Lead[] = [
     {
-        id: '1',
-        firstName: 'Sarah',
-        lastName: 'Connor',
-        email: 'sarah@cyberdyne.net',
-        company: 'Cyberdyne Systems',
-        businessName: 'Cyberdyne Systems, Inc.',
-        stage: 'New',
+        id: '101',
+        firstName: 'Michael',
+        lastName: 'Ross',
+        email: 'mross@precisionmfg.com',
+        company: 'Precision Manufacturing',
+        businessName: 'Precision Manufacturing Solutions LLC',
+        stage: 'Warm',
         loanProgram: '504',
-        dealStage: 'Prospecting',
+        dealStage: 'Prequal',
 
         // Business Details
         stateOfInc: 'CA',
-        industry: 'Robotics Manufacturing',
-        naicsCode: '334513',
-        yearsInBusiness: 12,
-        annualRevenue: 12000000,
-        netIncome: 1500000,
+        industry: 'CNC Machining',
+        naicsCode: '332710',
+        yearsInBusiness: 8,
+        annualRevenue: 4500000,
+        netIncome: 550000,
 
         // Deal
-        loanAmount: 4500000,
-        projectCost: 11000000,
+        loanAmount: 2200000,
+        projectCost: 5000000,
         propertyType: 'Industrial',
         projectTypes: ['Purchase', 'Expansion'],
         useOfFunds: ['Building', 'Equipment'],
@@ -76,195 +76,55 @@ export const mockLeads: Lead[] = [
 
         // Tasks
         lastContact: {
-            date: '2024-12-01',
-            method: 'Call',
-            outcome: 'Left voicemail'
+            date: '2024-12-03',
+            method: 'Meeting',
+            outcome: 'Collected financials'
         },
         nextTask: {
-            date: '2024-12-05',
-            action: 'Follow up on voicemail'
+            date: '2024-12-07',
+            action: 'Spread Financials'
         },
-        lastContactDate: '2024-12-01', // Legacy
-        nextAction: 'Follow up on voicemail', // Legacy
+        lastContactDate: '2024-12-03',
+        nextAction: 'Spread Financials',
 
         notes: []
     },
     {
-        id: '2',
-        firstName: 'James',
-        lastName: 'Holden',
-        email: 'jholden@tycho.com',
-        company: 'Tycho Manufacturing',
-        businessName: 'Tycho Station LLC',
-        stage: 'Contacted',
-        loanProgram: '7a',
-        dealStage: 'Prequal',
-
-        stateOfInc: 'NV',
-        industry: 'Aerospace Parts',
-        yearsInBusiness: 5,
-        annualRevenue: 3500000,
-        netIncome: 420000,
-
-        loanAmount: 1200000,
-        projectTypes: ['Expansion'],
-        useOfFunds: ['Equipment', 'Working Capital'],
-
-        referralSource: 'Broker',
-        existingBank: 'Credit Union',
-
-        lastContact: {
-            date: '2024-12-02',
-            method: 'Meeting',
-            outcome: 'Discussed eligibility'
-        },
-        nextTask: {
-            date: '2024-12-06',
-            action: 'Collect Tax Returns'
-        },
-        lastContactDate: '2024-12-02',
-        nextAction: 'Collect Tax Returns',
-
-        notes: [
-            {
-                id: 'n1',
-                content: 'Spoke with James. He is looking to expand his production line.',
-                timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
-                author: 'You',
-                type: 'UserNote'
-            }
-        ]
-    },
-    {
-        id: '3',
-        firstName: 'Ellen',
-        lastName: 'Ripley',
-        email: 'ripley@weyland.corp',
-        company: 'Nostromo Logistics',
-        businessName: 'Nostromo Transport Services',
+        id: '102',
+        firstName: 'Elena',
+        lastName: 'Vasquez',
+        email: 'elena@greenlogistics.com',
+        company: 'Green Logistics',
+        businessName: 'Green Logistics & Transport Inc.',
         stage: 'In Process',
-        loanProgram: '504',
+        loanProgram: '7a',
         dealStage: 'Underwriting',
 
-        stateOfInc: 'CA',
-        industry: 'Logistics',
-        yearsInBusiness: 15,
-        annualRevenue: 8500000,
-        netIncome: 950000,
+        stateOfInc: 'AZ',
+        industry: 'Freight Trucking',
+        yearsInBusiness: 5,
+        annualRevenue: 3200000,
+        netIncome: 280000,
 
-        loanAmount: 3200000,
-        projectCost: 8000000,
-        propertyType: 'Warehouse',
+        loanAmount: 1500000,
         projectTypes: ['Refinance'],
         useOfFunds: ['Debt Refi', 'Working Capital'],
 
-        referralSource: 'Banker',
-        bankerId: 'b2', // Sarah Miller
+        referralSource: 'Broker',
         existingBank: 'Wells Fargo',
 
         lastContact: {
-            date: '2024-11-28',
+            date: '2024-12-01',
             method: 'Email',
-            outcome: 'Requested appraisal docs'
+            outcome: 'Requested tax returns'
         },
         nextTask: {
-            date: '2024-12-08',
-            action: 'Review Appraisal'
+            date: '2024-12-05',
+            action: 'Review Tax Returns'
         },
-        lastContactDate: '2024-11-28',
-        nextAction: 'Review Appraisal',
-
-        notes: [
-            {
-                id: 'n2',
-                content: 'Appraisal ordered. Expecting report by Friday.',
-                timestamp: new Date(Date.now() - 86400000 * 5).toISOString(),
-                author: 'System',
-                type: 'SystemEvent'
-            }
-        ]
-    },
-    {
-        id: '4',
-        firstName: 'Tony',
-        lastName: 'Stark',
-        email: 'tony@stark.ind',
-        company: 'Stark Industries',
-        businessName: 'Stark Industries Global',
-        stage: 'Warm',
-        loanProgram: '7a',
-        dealStage: 'App',
-
-        stateOfInc: 'NY',
-        industry: 'Defense Technology',
-        yearsInBusiness: 20,
-        annualRevenue: 50000000,
-        netIncome: 12000000,
-
-        loanAmount: 5000000,
-        projectTypes: ['Expansion', 'Construction'],
-        useOfFunds: ['Building', 'Other'],
-
-        referralSource: 'Direct',
-        existingBank: 'Chase',
-
-        lastContact: {
-            date: '2024-12-03',
-            method: 'Call',
-            outcome: 'Confirmed site visit'
-        },
-        nextTask: {
-            date: '2024-12-10',
-            action: 'Site Visit'
-        },
-        lastContactDate: '2024-12-03',
-        nextAction: 'Site Visit',
+        lastContactDate: '2024-12-01',
+        nextAction: 'Review Tax Returns',
 
         notes: []
-    },
-    {
-        id: '5',
-        firstName: 'Walter',
-        lastName: 'White',
-        email: 'heisenberg@abq.com',
-        company: 'A1 Car Wash',
-        businessName: 'White Holdings LLC',
-        stage: 'Not a Fit',
-        loanProgram: 'Micro',
-        dealStage: 'Prospecting',
-
-        stateOfInc: 'NM',
-        industry: 'Car Wash',
-        yearsInBusiness: 2,
-        annualRevenue: 800000,
-        netIncome: 600000,
-
-        loanAmount: 50000,
-        projectTypes: ['Construction'],
-        useOfFunds: ['Other'],
-
-        referralSource: 'Other',
-
-        lastContact: {
-            date: '2024-12-03',
-            method: 'Email',
-            outcome: 'Sent rejection'
-        },
-        nextTask: {
-            date: '2024-12-03',
-            action: 'Archive'
-        },
-        lastContactDate: '2024-12-03',
-        nextAction: 'Archive',
-
-        notes: [
-            {
-                id: 'n3',
-                content: 'Cash heavy business. Compliance concerns.',
-                timestamp: new Date(Date.now() - 86400000).toISOString(),
-                author: 'Compliance',
-                type: 'SystemEvent'
-            }
-        ]
     }
 ];

@@ -36,10 +36,29 @@ const AddLeadForm: React.FC<{ onAdd: (lead: Lead) => void, onCancel: () => void 
                 required
             />
             <input
-                placeholder="Company"
+                placeholder="Company (Display Name)"
                 value={formData.company || ''}
                 onChange={e => setFormData({ ...formData, company: e.target.value })}
             />
+            <input
+                placeholder="Legal Business Name"
+                value={formData.businessName || ''}
+                onChange={e => setFormData({ ...formData, businessName: e.target.value })}
+            />
+            <div className="form-row" style={{ display: 'flex', gap: '1rem' }}>
+                <input
+                    placeholder="Phone"
+                    value={formData.phone || ''}
+                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                    style={{ flex: 1 }}
+                />
+                <input
+                    placeholder="City"
+                    value={formData.city || ''}
+                    onChange={e => setFormData({ ...formData, city: e.target.value })}
+                    style={{ flex: 1 }}
+                />
+            </div>
             <div className="form-row" style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                 <select
                     value={formData.loanProgram}

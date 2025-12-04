@@ -1,7 +1,7 @@
 import type { Lead } from "@leads/shared";
 import { mockLeads } from "../mockData";
 
-const STORAGE_KEY = "leads_demo_data";
+const STORAGE_KEY = "leads_demo_data_v2";
 const BRAIN_SERVICE_URL = import.meta.env.VITE_BRAIN_SERVICE_URL || "https://brain-service-952649324958.us-central1.run.app";
 
 export class LocalStoreService {
