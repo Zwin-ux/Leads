@@ -7,6 +7,7 @@ import { PipelineView } from './PipelineView';
 import AddLeadForm from './AddLeadForm';
 import DropZone from './DropZone';
 import logo from '../assets/ampac-logo-v2.png';
+import { LeadGenerator } from './LeadGenerator';
 
 const LeadList: React.FC = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -14,7 +15,7 @@ const LeadList: React.FC = () => {
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-    const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
+    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator'>('list');
     const [selectedOwner, setSelectedOwner] = useState<string>('All');
 
     useEffect(() => {
@@ -84,9 +85,24 @@ const LeadList: React.FC = () => {
         }
     };
 
+    const handleAddFromGenerator = async (lead: Lead) => {
+        try {
+            const newLead = await apiService.createLead(lead);
+            setLeads([...leads, newLead]);
+            setViewMode('list'); // Switch back to list to see the new lead
+        } catch (err) {
+            console.error("Failed to create lead", err);
+            alert("Failed to create lead");
+        }
+    };
+
     const filteredLeads = selectedOwner === 'All'
         ? leads
         : leads.filter(l => l.owner === selectedOwner);
+
+    if (viewMode === 'generator') {
+        return <LeadGenerator onAddLead={handleAddFromGenerator} onCancel={() => setViewMode('list')} />;
+    }
 
     return (
         <div className="lead-list">
@@ -114,6 +130,14 @@ const LeadList: React.FC = () => {
                             <option key={m.email} value={m.name}>{m.name}</option>
                         ))}
                     </select>
+
+                    <button
+                        className="btn-secondary"
+                        onClick={() => setViewMode('generator')}
+                        style={{ marginRight: '1rem', background: '#e0f2fe', color: '#0284c7', border: '1px solid #bae6fd' }}
+                    >
+                        <span className="icon">🔍</span> Find Leads
+                    </button>
 
                     <div className="segmented-control">
                         <button
@@ -157,6 +181,7 @@ const LeadList: React.FC = () => {
                     <div className="empty-actions">
                         <button className="btn-primary" onClick={() => setShowImport(true)}>Import Excel File</button>
                         <button className="btn-secondary" onClick={() => setShowAdd(true)}>Add Manually</button>
+                        <button className="btn-secondary" onClick={() => setViewMode('generator')}>🔍 Find Leads</button>
                     </div>
                 </div>
             ) : viewMode === 'pipeline' ? (
