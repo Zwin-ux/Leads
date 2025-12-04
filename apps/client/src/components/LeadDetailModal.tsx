@@ -29,7 +29,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
         onClose();
     };
 
-    const handleGenerateEmail = async (type: 'intro' | 'update' | 'voicemail') => {
+    const handleGenerateEmail = async (type: 'intro' | 'update' | 'voicemail' | 'leadership') => {
         setIsGenerating(true);
         // Simulate AI delay
         setTimeout(async () => {
@@ -38,12 +38,58 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 content = `Hi ${editedLead.firstName},\n\nI'm reviewing your loan request for ${editedLead.businessName || editedLead.company}. I have a few quick questions to get started.\n\nBest,\nAmPac Team`;
             } else if (type === 'update') {
                 content = `Hi ${referringBanker?.name || 'Partner'},\n\nJust wanted to give you a quick update on the ${editedLead.lastName} deal. We are moving to underwriting.\n\nThanks for the referral!`;
+            } else if (type === 'leadership') {
+                content = `Team,\n\nUpdate on ${editedLead.businessName}:\n\n- Stage: Underwriting\n- Loan Amount: $${editedLead.loanAmount?.toLocaleString()}\n- Issues: None so far\n\nMoving forward with appraisal order.\n\nBest,\n${editedLead.owner || 'BDO'}`;
             } else {
                 content = `Hi ${editedLead.firstName},\n\nI just left you a voicemail regarding your loan application. Please give me a call back when you have a moment.\n\nThanks,`;
             }
             setEmailDraft(content);
             setIsGenerating(false);
         }, 1000);
+    };
+
+    const performResearch = async (type: 'business' | 'banker') => {
+        setIsGenerating(true);
+        try {
+            const query = type === 'business'
+                ? `${editedLead.businessName || editedLead.company} ${editedLead.city || ''} business`
+                : `${referringBanker?.name} ${referringBanker?.bank} banker`;
+
+            const response = await fetch('/api/research', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, type })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (type === 'business') setBusinessResearch(data);
+                else setBankerResearch(data);
+            } else {
+                throw new Error("API failed");
+            }
+        } catch (err) {
+            console.warn("Research API failed, falling back to mock", err);
+            // Fallback Mock
+            setTimeout(() => {
+                if (type === 'business') {
+                    setBusinessResearch({
+                        summary: `${editedLead.businessName || editedLead.company} is a leading provider in the ${editedLead.industry || 'local'} sector.`,
+                        headcount: "10-50 employees",
+                        flags: ["Recent office expansion", "No lawsuits found"],
+                        news: "Featured in local business journal last month."
+                    });
+                } else {
+                    setBankerResearch({
+                        winRate: "85%",
+                        speed: "Fast (21 days avg)",
+                        leverage: "Loves 504 construction deals. Often waives points for repeat clients."
+                    });
+                }
+            }, 1000);
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     return (
@@ -168,18 +214,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                             <div className="ai-tools-grid">
                                 <button
                                     className={`ai-tool-btn ${businessResearch ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setIsGenerating(true);
-                                        setTimeout(() => {
-                                            setBusinessResearch({
-                                                summary: `${editedLead.businessName || editedLead.company} is a leading provider in the ${editedLead.industry || 'local'} sector.`,
-                                                headcount: "10-50 employees",
-                                                flags: ["Recent office expansion", "No lawsuits found"],
-                                                news: "Featured in local business journal last month."
-                                            });
-                                            setIsGenerating(false);
-                                        }, 1500);
-                                    }}
+                                    onClick={() => performResearch('business')}
                                     disabled={isGenerating || !!businessResearch}
                                 >
                                     <span className="ai-tool-icon">🔍</span>
@@ -190,17 +225,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                 </button>
                                 <button
                                     className={`ai-tool-btn ${bankerResearch ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setIsGenerating(true);
-                                        setTimeout(() => {
-                                            setBankerResearch({
-                                                winRate: "85%",
-                                                speed: "Fast (21 days avg)",
-                                                leverage: "Loves 504 construction deals. Often waives points for repeat clients."
-                                            });
-                                            setIsGenerating(false);
-                                        }, 1500);
-                                    }}
+                                    onClick={() => performResearch('banker')}
                                     disabled={isGenerating || !!bankerResearch}
                                 >
                                     <span className="ai-tool-icon">🏦</span>
@@ -251,6 +276,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                 <div className="composer-actions" style={{ marginBottom: '1rem', marginTop: 0 }}>
                                     <button className="secondary" onClick={() => handleGenerateEmail('intro')} disabled={isGenerating}>Borrower Intro</button>
                                     <button className="secondary" onClick={() => handleGenerateEmail('update')} disabled={isGenerating}>Banker Update</button>
+                                    <button className="secondary" onClick={() => handleGenerateEmail('leadership')} disabled={isGenerating}>Leadership Update</button>
                                     <button className="secondary" onClick={() => handleGenerateEmail('voicemail')} disabled={isGenerating}>Voicemail Follow-up</button>
                                 </div>
 
@@ -267,7 +293,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                             <button
                                                 className="primary"
                                                 onClick={() => {
-                                                    const subject = encodeURIComponent(`Follow up: ${editedLead.businessName}`);
+                                                    const subject = encodeURIComponent(`Update: ${editedLead.businessName}`);
                                                     window.location.href = `mailto:${editedLead.email}?subject=${subject}&body=${encodeURIComponent(emailDraft)}`;
                                                 }}
                                             >

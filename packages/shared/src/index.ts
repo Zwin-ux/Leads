@@ -26,6 +26,8 @@ export interface Lead {
 
     // Business Details
     stateOfInc?: string;
+    city?: string;
+    owner?: string; // BDO Owner
     industry?: string;
     naicsCode?: string;
     yearsInBusiness?: number;
