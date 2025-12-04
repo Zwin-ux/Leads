@@ -1,4 +1,4 @@
-/// <reference path="../google-maps.d.ts" />
+/// <reference path="../types/google-maps.d.ts" />
 import React, { useState, useEffect, useRef } from 'react';
 import type { Lead } from '@leads/shared';
 
@@ -105,11 +105,16 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
         onAddLead(newLead);
     };
 
+    // Google Maps components rendered via wrapper to avoid TS custom element errors
+    const GoogleMapsLoader = () => (
+        <div dangerouslySetInnerHTML={{
+            __html: `<gmpx-api-loader key="AIzaSyD1K_Wmih7d1BHz24hgGGwEHcDqu3rPgxI" solution-channel="GMP_GE_mapsandplacesautocomplete_v2"></gmpx-api-loader>`
+        }} />
+    );
+
     return (
         <div className="lead-generator">
-            {/* Load Google Maps API */}
-            <gmpx-api-loader key="AIzaSyD1K_Wmih7d1BHz24hgGGwEHcDqu3rPgxI" solution-channel="GMP_GE_mapsandplacesautocomplete_v2">
-            </gmpx-api-loader>
+            <GoogleMapsLoader />
 
             <div className="generator-header">
                 <button onClick={onCancel} className="back-btn">← Back to Pipeline</button>
@@ -118,16 +123,20 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
 
             <div className="map-container">
                 <div className="search-overlay">
-                    <gmpx-place-picker
-                        ref={pickerRef}
-                        placeholder="Search for a business (e.g. 'Machine Shops in Riverside')"
-                        style={{ width: '100%' }}
-                    ></gmpx-place-picker>
+                    <div
+                        ref={pickerRef as any}
+                        dangerouslySetInnerHTML={{
+                            __html: `<gmpx-place-picker placeholder="Search for a business (e.g. 'Machine Shops in Riverside')" style="width: 100%"></gmpx-place-picker>`
+                        }}
+                    />
                 </div>
 
-                <gmp-map ref={mapRef} center="33.9533, -117.3961" zoom="11" map-id="DEMO_MAP_ID" style={{ height: '500px', width: '100%', borderRadius: '12px' }}>
-                    <gmp-advanced-marker ref={markerRef}></gmp-advanced-marker>
-                </gmp-map>
+                <div
+                    ref={mapRef as any}
+                    dangerouslySetInnerHTML={{
+                        __html: `<gmp-map center="33.9533, -117.3961" zoom="11" map-id="DEMO_MAP_ID" style="height: 500px; width: 100%; border-radius: 12px;"><gmp-advanced-marker></gmp-advanced-marker></gmp-map>`
+                    }}
+                />
             </div>
 
             {selectedPlace && (

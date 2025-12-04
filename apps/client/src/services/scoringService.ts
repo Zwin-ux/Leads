@@ -36,7 +36,6 @@ export const scoringService = {
         const businessText = (lead.company + ' ' + (lead.businessName || '')).toLowerCase();
 
         let isTier1 = false;
-        let isTier2 = false;
 
         if (INDUSTRY_TIERS.tier1.some(k => businessText.includes(k))) {
             industryScore = 40;
@@ -44,7 +43,6 @@ export const scoringService = {
             positiveFactors.push("Strong SBA 504 Industry Match");
         } else if (INDUSTRY_TIERS.tier2.some(k => businessText.includes(k))) {
             industryScore = 25;
-            isTier2 = true;
             positiveFactors.push("Good SBA 7a Industry Match");
         } else {
             industryScore = 10;
