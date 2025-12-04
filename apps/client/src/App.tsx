@@ -15,6 +15,11 @@ function App() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  // Site Gate State
+  const [isSiteUnlocked, setIsSiteUnlocked] = useState(false);
+  const [sitePassword, setSitePassword] = useState("");
+  const [siteError, setSiteError] = useState<string | null>(null);
+
   useEffect(() => {
     // Check if running in Excel
     if (typeof Office !== "undefined" && Office.context && Office.context.host === Office.HostType.Excel) {
@@ -25,8 +30,26 @@ function App() {
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
+      setIsSiteUnlocked(true); // If user is logged in, site is unlocked
+    } else {
+      // Check if site is unlocked in session
+      const unlocked = sessionStorage.getItem("leads_site_unlocked");
+      if (unlocked === "true") {
+        setIsSiteUnlocked(true);
+      }
     }
   }, []);
+
+  const handleSiteUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSiteError(null);
+    if (sitePassword.toLowerCase() === "mazen") {
+      setIsSiteUnlocked(true);
+      sessionStorage.setItem("leads_site_unlocked", "true");
+    } else {
+      setSiteError("Incorrect site password.");
+    }
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +68,39 @@ function App() {
     setUser(null);
     setEmail("");
     setPassword("");
+    // We do NOT lock the site on logout, just the user session
   };
 
+  // Step 1: Site Gate
+  if (!isSiteUnlocked) {
+    return (
+      <div className="App login-page">
+        <div className="login-container">
+          <div className="login-header">
+            <h1>AmPac Sales Console</h1>
+            <p className="login-subtitle">Restricted Access</p>
+          </div>
+          <form onSubmit={handleSiteUnlock} className="login-form">
+            <div className="form-group">
+              <label>Site Password</label>
+              <input
+                type="password"
+                value={sitePassword}
+                onChange={e => setSitePassword(e.target.value)}
+                required
+                autoComplete="off"
+                placeholder="Enter site password..."
+              />
+            </div>
+            {siteError && <div className="error-message">{siteError}</div>}
+            <button type="submit" className="primary full-width">Unlock Access</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 2: User Login
   if (!user) {
     return (
       <div className="App login-page">
@@ -63,7 +117,8 @@ function App() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                autoComplete="off"
+                autoComplete="email"
+                placeholder="name@ampac.com"
               />
             </div>
             <div className="form-group">
@@ -73,7 +128,7 @@ function App() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                autoComplete="new-password"
+                autoComplete="current-password"
               />
             </div>
             {error && <div className="error-message">{error}</div>}
