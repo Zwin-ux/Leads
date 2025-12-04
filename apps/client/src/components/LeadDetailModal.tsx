@@ -138,7 +138,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
         setShowAddContact(true);
     };
 
-    const handleTransfer = async (leadId: string, newOwner: string, message: string, type: 'transfer' | 'collaborate') => {
+    const handleTransfer = async (_leadId: string, newOwner: string, message: string, type: 'transfer' | 'collaborate') => {
         let updatedLead = { ...lead };
 
         if (type === 'transfer') {

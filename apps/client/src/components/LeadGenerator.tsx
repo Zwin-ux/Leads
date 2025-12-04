@@ -1,17 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Lead } from '@leads/shared';
 
-// Declare custom elements for TypeScript
-declare global {
-    namespace JSX {
-        interface IntrinsicElements {
-            'gmpx-api-loader': any;
-            'gmpx-place-picker': any;
-            'gmp-map': any;
-            'gmp-advanced-marker': any;
-        }
-    }
-}
+
 
 interface PlaceResult {
     id: string;
