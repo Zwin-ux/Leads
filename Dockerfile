@@ -7,6 +7,8 @@ COPY packages/shared/package*.json ./packages/shared/
 RUN npm ci
 COPY . .
 RUN npm run build -w packages/shared
+ENV VITE_DEMO_MODE=true
+ENV VITE_BRAIN_SERVICE_URL=https://brain-service-952649324958.us-central1.run.app
 RUN npm run build -w apps/client
 
 # Serve Stage
