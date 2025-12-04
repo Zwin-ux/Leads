@@ -6,6 +6,7 @@ COPY apps/client/package*.json ./apps/client/
 COPY packages/shared/package*.json ./packages/shared/
 RUN npm ci
 COPY . .
+RUN npm run build -w packages/shared
 RUN npm run build -w apps/client
 
 # Serve Stage
