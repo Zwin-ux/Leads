@@ -74,6 +74,18 @@ export interface Lead {
 
     // Notes
     notes?: Note[];
+
+    // Contacts
+    contacts?: Contact[];
+}
+
+export interface Contact {
+    id: string;
+    name: string;
+    role: string;
+    email: string;
+    phone?: string;
+    isPrimary: boolean;
 }
 
 export interface Note {

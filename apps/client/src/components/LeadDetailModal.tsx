@@ -12,7 +12,7 @@ interface LeadDetailModalProps {
 const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate }) => {
     const [editedLead, setEditedLead] = useState<Lead>(lead);
     const [referringBanker, setReferringBanker] = useState<Banker | undefined>(undefined);
-    const [activeTab, setActiveTab] = useState<'snapshot' | 'research' | 'notes'>('snapshot');
+    const [activeTab, setActiveTab] = useState<'snapshot' | 'contacts' | 'research' | 'notes'>('snapshot');
     const [emailDraft, setEmailDraft] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [businessResearch, setBusinessResearch] = useState<{ summary: string; headcount: string; flags: string[]; news: string } | null>(null);
@@ -144,6 +144,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 {/* Tabs */}
                 <div className="modal-tabs">
                     <button className={`tab-btn ${activeTab === 'snapshot' ? 'active' : ''}`} onClick={() => setActiveTab('snapshot')}>Snapshot</button>
+                    <button className={`tab-btn ${activeTab === 'contacts' ? 'active' : ''}`} onClick={() => setActiveTab('contacts')}>Contacts</button>
                     <button className={`tab-btn ${activeTab === 'research' ? 'active' : ''}`} onClick={() => setActiveTab('research')}>AI Assistant</button>
                     <button className={`tab-btn ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')}>Notes</button>
                 </div>
@@ -151,7 +152,6 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 <div className="modal-body">
                     {activeTab === 'snapshot' && (
                         <div className="snapshot-grid">
-                            {/* ... snapshot content ... */}
                             <div className="snapshot-section">
                                 <h4>Deal Context</h4>
                                 <div className="data-row">
@@ -186,6 +186,100 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                     <span className="data-value">{editedLead.lastContact?.outcome || '-'}</span>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'contacts' && (
+                        <div className="contacts-tab">
+                            <div className="contacts-list">
+                                {editedLead.contacts?.map(contact => (
+                                    <div key={contact.id} className="contact-card">
+                                        <div className="contact-info">
+                                            <div className="contact-header">
+                                                <h4>{contact.name}</h4>
+                                                {contact.isPrimary && <span className="badge-primary">Primary</span>}
+                                            </div>
+                                            <p className="contact-role">{contact.role}</p>
+                                            <div className="contact-details">
+                                                <a href={`mailto:${contact.email}`}>{contact.email}</a>
+                                                {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!editedLead.contacts || editedLead.contacts.length === 0) && (
+                                    <div className="empty-contacts">
+                                        <p>No contacts added yet.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="add-contact-form">
+                                <h4>Add New Contact</h4>
+                                <form onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const form = e.target as HTMLFormElement;
+                                    const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+                                    const role = (form.elements.namedItem('role') as HTMLInputElement).value;
+                                    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+                                    const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
+
+                                    if (!name || !email) return;
+
+                                    const newContact = {
+                                        id: crypto.randomUUID(),
+                                        name,
+                                        role,
+                                        email,
+                                        phone,
+                                        isPrimary: (!editedLead.contacts || editedLead.contacts.length === 0)
+                                    };
+
+                                    setEditedLead(prev => ({
+                                        ...prev,
+                                        contacts: [...(prev.contacts || []), newContact]
+                                    }));
+                                    form.reset();
+                                }}>
+                                    <div className="form-row">
+                                        <input name="name" placeholder="Name (e.g. John Doe)" required />
+                                        <input name="role" placeholder="Role (e.g. CEO)" required />
+                                    </div>
+                                    <div className="form-row">
+                                        <input name="email" type="email" placeholder="Email" required />
+                                        <input name="phone" type="tel" placeholder="Phone" />
+                                    </div>
+                                    <button type="submit" className="btn-secondary" style={{ width: '100%', marginTop: '0.5rem' }}>+ Add Contact</button>
+                                </form>
+                            </div>
+
+                            <style>{`
+                                .contacts-tab { padding: 1rem; }
+                                .contacts-list { display: grid; gap: 1rem; margin-bottom: 2rem; }
+                                .contact-card { 
+                                    background: white; 
+                                    border: 1px solid #e2e8f0; 
+                                    padding: 1rem; 
+                                    border-radius: 8px;
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                }
+                                .contact-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+                                .contact-header h4 { margin: 0; font-size: 1rem; color: #1e293b; }
+                                .badge-primary { 
+                                    background: #dbeafe; color: #1e40af; 
+                                    font-size: 0.7rem; padding: 2px 6px; 
+                                    border-radius: 4px; font-weight: 600; 
+                                }
+                                .contact-role { color: #64748b; font-size: 0.875rem; margin: 0 0 0.5rem 0; }
+                                .contact-details { display: flex; gap: 1rem; font-size: 0.875rem; }
+                                .contact-details a { color: var(--primary); text-decoration: none; }
+                                .add-contact-form { background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px dashed #cbd5e1; }
+                                .add-contact-form h4 { margin-top: 0; margin-bottom: 1rem; color: #475569; }
+                                .form-row { display: flex; gap: 1rem; margin-bottom: 0.75rem; }
+                                .form-row input { flex: 1; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px; }
+                            `}</style>
                         </div>
                     )}
 
