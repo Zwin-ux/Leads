@@ -89,18 +89,18 @@ const LeadList: React.FC = () => {
                     {loading && <span className="loading-badge">Syncing...</span>}
                 </div>
                 <div className="actions">
-                    <div className="view-toggle">
+                    <div className="segmented-control">
                         <button
                             className={viewMode === 'list' ? 'active' : ''}
                             onClick={() => setViewMode('list')}
                         >
-                            List
+                            <span>📄</span> List
                         </button>
                         <button
                             className={viewMode === 'pipeline' ? 'active' : ''}
                             onClick={() => setViewMode('pipeline')}
                         >
-                            Pipeline
+                            <span>📊</span> Pipeline
                         </button>
                     </div>
                     <button className="btn-secondary" onClick={() => setShowImport(true)}>
