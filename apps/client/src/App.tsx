@@ -3,6 +3,7 @@ import { authService } from "./services/authService";
 import type { User } from "./services/authService";
 import LeadDetail from "./components/LeadDetail";
 import LeadList from "./components/LeadList";
+import logo from "./assets/ampac-logo-v2.png";
 
 import './App.css';
 
@@ -77,7 +78,7 @@ function App() {
       <div className="App login-page">
         <div className="login-container">
           <div className="login-header">
-            <h1>AmPac Sales Console</h1>
+            <img src={logo} alt="AmPac Business Capital" style={{ height: '60px', marginBottom: '1rem' }} />
             <p className="login-subtitle">Restricted Access</p>
           </div>
           <form onSubmit={handleSiteUnlock} className="login-form">
@@ -106,7 +107,7 @@ function App() {
       <div className="App login-page">
         <div className="login-container">
           <div className="login-header">
-            <h1>AmPac Sales Console</h1>
+            <img src={logo} alt="AmPac Business Capital" style={{ height: '60px', marginBottom: '1rem' }} />
             <p className="login-subtitle">Authorized Personnel Only</p>
           </div>
           <form onSubmit={handleLogin} className="login-form">
@@ -143,7 +144,7 @@ function App() {
     <div className="App">
       <div className="app-bar">
         <div className="logo-container" style={{ marginRight: 'auto', display: 'flex', alignItems: 'center' }}>
-          <img src="/src/assets/ampac-logo.png" alt="AmPac" style={{ height: '40px' }} />
+          <img src={logo} alt="AmPac" style={{ height: '48px' }} />
         </div>
         <div className="user-info">
           <span className="user-name">{user.name}</span>

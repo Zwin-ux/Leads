@@ -5,6 +5,7 @@ import LeadDetailModal from './LeadDetailModal';
 import { PipelineView } from './PipelineView';
 import AddLeadForm from './AddLeadForm';
 import DropZone from './DropZone';
+import logo from '../assets/ampac-logo-v2.png';
 
 const LeadList: React.FC = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -125,6 +126,7 @@ const LeadList: React.FC = () => {
 
             {!loading && leads.length === 0 ? (
                 <div className="empty-state">
+                    <img src={logo} alt="AmPac" style={{ height: '80px', opacity: 0.2, marginBottom: '1.5rem', filter: 'grayscale(100%)' }} />
                     <h3>No leads found</h3>
                     <p>Get started by importing your spreadsheet or adding a lead manually.</p>
                     <div className="empty-actions">
