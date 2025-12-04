@@ -9,7 +9,6 @@ import DropZone from './DropZone';
 const LeadList: React.FC = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -25,7 +24,6 @@ const LeadList: React.FC = () => {
             const data = await apiService.getLeads();
             setLeads(data);
         } catch (err) {
-            setError("Failed to load leads");
             console.error(err);
         } finally {
             setLoading(false);
