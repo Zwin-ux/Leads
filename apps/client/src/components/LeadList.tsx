@@ -63,42 +63,52 @@ const LeadList: React.FC = () => {
         }
     };
 
+    const handleLeadMove = async (leadId: string, newStage: string) => {
+        const lead = leads.find(l => l.id === leadId);
+        if (!lead || lead.dealStage === newStage) return;
+
+        // Optimistic update
+        const updatedLead = { ...lead, dealStage: newStage as any };
+        setLeads(leads.map(l => l.id === leadId ? updatedLead : l));
+
+        try {
+            await apiService.updateLead(updatedLead);
+        } catch (err) {
+            console.error("Failed to move lead", err);
+            // Revert on failure
+            setLeads(leads.map(l => l.id === leadId ? lead : l));
+            alert("Failed to move lead");
+        }
+    };
+
     return (
         <div className="lead-list">
             <div className="header">
-                <h1>My Leads</h1>
-                {loading && <span style={{ marginLeft: '1rem', color: '#aaa' }}>Loading...</span>}
+                <div className="header-title">
+                    <h1>My Leads</h1>
+                    {loading && <span className="loading-badge">Syncing...</span>}
+                </div>
                 <div className="actions">
-                    <div className="view-toggle" style={{ marginRight: '1rem', background: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: '8px', display: 'inline-flex' }}>
+                    <div className="view-toggle">
                         <button
+                            className={viewMode === 'list' ? 'active' : ''}
                             onClick={() => setViewMode('list')}
-                            style={{
-                                background: viewMode === 'list' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                border: 'none',
-                                color: viewMode === 'list' ? '#fff' : '#aaa',
-                                padding: '4px 12px',
-                                borderRadius: '6px',
-                                cursor: 'pointer'
-                            }}
                         >
                             List
                         </button>
                         <button
+                            className={viewMode === 'pipeline' ? 'active' : ''}
                             onClick={() => setViewMode('pipeline')}
-                            style={{
-                                background: viewMode === 'pipeline' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                border: 'none',
-                                color: viewMode === 'pipeline' ? '#fff' : '#aaa',
-                                padding: '4px 12px',
-                                borderRadius: '6px',
-                                cursor: 'pointer'
-                            }}
                         >
                             Pipeline
                         </button>
                     </div>
-                    <button className="secondary" onClick={() => setShowImport(true)}>Import Excel</button>
-                    <button className="primary" onClick={() => setShowAdd(true)}>+ New Lead</button>
+                    <button className="btn-secondary" onClick={() => setShowImport(true)}>
+                        <span className="icon">📥</span> Import Excel
+                    </button>
+                    <button className="btn-primary" onClick={() => setShowAdd(true)}>
+                        <span className="icon">＋</span> New Lead
+                    </button>
                 </div>
             </div>
 
@@ -114,16 +124,16 @@ const LeadList: React.FC = () => {
             )}
 
             {!loading && leads.length === 0 ? (
-                <div className="empty-state" style={{ textAlign: 'center', padding: '4rem 2rem', border: '2px dashed #e4e4e7', borderRadius: '12px' }}>
-                    <h3 style={{ marginBottom: '1rem', color: '#09090b' }}>No leads found</h3>
-                    <p style={{ color: '#71717a', marginBottom: '2rem' }}>Get started by importing your spreadsheet or adding a lead manually.</p>
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                        <button className="primary" onClick={() => setShowImport(true)}>Import Excel File</button>
-                        <button className="secondary" onClick={() => setShowAdd(true)}>Add Manually</button>
+                <div className="empty-state">
+                    <h3>No leads found</h3>
+                    <p>Get started by importing your spreadsheet or adding a lead manually.</p>
+                    <div className="empty-actions">
+                        <button className="btn-primary" onClick={() => setShowImport(true)}>Import Excel File</button>
+                        <button className="btn-secondary" onClick={() => setShowAdd(true)}>Add Manually</button>
                     </div>
                 </div>
             ) : viewMode === 'pipeline' ? (
-                <PipelineView leads={leads} onLeadClick={setSelectedLead} />
+                <PipelineView leads={leads} onLeadClick={setSelectedLead} onLeadMove={handleLeadMove} />
             ) : (
                 <div className="grid">
                     {leads.map(lead => (

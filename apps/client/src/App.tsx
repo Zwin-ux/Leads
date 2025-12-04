@@ -142,6 +142,9 @@ function App() {
   return (
     <div className="App">
       <div className="app-bar">
+        <div className="logo-container" style={{ marginRight: 'auto', display: 'flex', alignItems: 'center' }}>
+          <img src="/src/assets/ampac-logo.png" alt="AmPac" style={{ height: '40px' }} />
+        </div>
         <div className="user-info">
           <span className="user-name">{user.name}</span>
           <span className="user-title">{user.title}</span>
