@@ -51,35 +51,33 @@ function App() {
     return (
       <div className="App login-page">
         <div className="login-container">
-          <OrgCard />
-          <h2 style={{ textAlign: 'center', margin: '2rem 0 1rem', color: '#fff' }}>Sign In</h2>
+          <h1 style={{ color: '#000', marginBottom: '2rem', letterSpacing: '-0.05em' }}>AMPAC LEADS SITE</h1>
           <form onSubmit={handleLogin} className="login-form">
             <div className="form-group">
-              <label>Email</label>
+              <label style={{ color: '#52525b' }}>Email</label>
               <input
                 type="email"
                 placeholder="name@ampac.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                style={{ background: '#fff', color: '#000', borderColor: '#e4e4e7' }}
               />
             </div>
             <div className="form-group">
-              <label>Password</label>
+              <label style={{ color: '#52525b' }}>Password</label>
               <input
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                style={{ background: '#fff', color: '#000', borderColor: '#e4e4e7' }}
               />
             </div>
             {error && <div className="error-message">{error}</div>}
-            <button type="submit" className="primary full-width">Sign In</button>
+            <button type="submit" className="primary full-width" style={{ background: '#000', color: '#fff' }}>Sign In</button>
           </form>
-          <p className="login-footer">
-            Restricted Access. Authorized Personnel Only.
-          </p>
         </div>
       </div>
     );

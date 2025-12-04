@@ -35,7 +35,7 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ leads, onLeadClick }
                             <div key={lead.id} className="pipeline-card" onClick={() => onLeadClick(lead)}>
                                 <div className="card-header">
                                     <span className="company-name">{lead.company || `${lead.firstName} ${lead.lastName}`}</span>
-                                    {lead.loanProgram && <span className={`program-tag ${lead.loanProgram}`}>{lead.loanProgram}</span>}
+                                    {lead.loanProgram && <span className={`program-tag sba-${lead.loanProgram.toLowerCase()}`}>{lead.loanProgram}</span>}
                                 </div>
                                 <div className="card-body">
                                     <div className="lead-name">{lead.firstName} {lead.lastName}</div>

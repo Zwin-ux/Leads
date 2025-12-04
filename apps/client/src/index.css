@@ -4,17 +4,15 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: #09090b;
+  background: #ffffff;
 }
 
 .login-container {
-  background: #18181b;
+  background: #ffffff;
   padding: 2.5rem;
-  border-radius: 12px;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border: 1px solid #27272a;
+  /* Removed border and shadow for ultra-simple look, or keep minimal */
 }
 
 .login-form .form-group {
