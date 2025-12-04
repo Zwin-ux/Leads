@@ -165,6 +165,15 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                     >
                                         Request Docs (SendNow)
                                     </button>
+                                    <button
+                                        className="secondary"
+                                        onClick={() => {
+                                            const subject = encodeURIComponent(`Follow up: ${editedLead.company || 'Your Loan Application'}`);
+                                            window.open(`mailto:${editedLead.email}?subject=${subject}`, '_blank');
+                                        }}
+                                    >
+                                        Open Outlook
+                                    </button>
                                 </div>
                             )}
                         </>

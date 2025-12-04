@@ -70,7 +70,6 @@ const LeadList: React.FC = () => {
             <div className="header">
                 <h1>My Leads</h1>
                 {loading && <span style={{ marginLeft: '1rem', color: '#aaa' }}>Loading...</span>}
-                {error && <span style={{ marginLeft: '1rem', color: 'red' }}>{error}</span>}
                 <div className="actions">
                     <div className="view-toggle" style={{ marginRight: '1rem', background: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: '8px', display: 'inline-flex' }}>
                         <button
@@ -116,7 +115,16 @@ const LeadList: React.FC = () => {
                 />
             )}
 
-            {viewMode === 'pipeline' ? (
+            {!loading && leads.length === 0 ? (
+                <div className="empty-state" style={{ textAlign: 'center', padding: '4rem 2rem', border: '2px dashed #e4e4e7', borderRadius: '12px' }}>
+                    <h3 style={{ marginBottom: '1rem', color: '#09090b' }}>No leads found</h3>
+                    <p style={{ color: '#71717a', marginBottom: '2rem' }}>Get started by importing your spreadsheet or adding a lead manually.</p>
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                        <button className="primary" onClick={() => setShowImport(true)}>Import Excel File</button>
+                        <button className="secondary" onClick={() => setShowAdd(true)}>Add Manually</button>
+                    </div>
+                </div>
+            ) : viewMode === 'pipeline' ? (
                 <PipelineView leads={leads} onLeadClick={setSelectedLead} />
             ) : (
                 <div className="grid">
