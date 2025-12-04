@@ -51,32 +51,32 @@ function App() {
     return (
       <div className="App login-page">
         <div className="login-container">
-          <h1 style={{ color: '#000', marginBottom: '2rem', letterSpacing: '-0.05em' }}>AMPAC LEADS SITE</h1>
+          <div className="login-header">
+            <h1>AMPAC LEADS</h1>
+          </div>
           <form onSubmit={handleLogin} className="login-form">
             <div className="form-group">
-              <label style={{ color: '#52525b' }}>Email</label>
+              <label>Email</label>
               <input
                 type="email"
                 placeholder="name@ampac.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                style={{ background: '#fff', color: '#000', borderColor: '#e4e4e7' }}
               />
             </div>
             <div className="form-group">
-              <label style={{ color: '#52525b' }}>Password</label>
+              <label>Password</label>
               <input
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                style={{ background: '#fff', color: '#000', borderColor: '#e4e4e7' }}
               />
             </div>
             {error && <div className="error-message">{error}</div>}
-            <button type="submit" className="primary full-width" style={{ background: '#000', color: '#fff' }}>Sign In</button>
+            <button type="submit" className="primary full-width">Sign In</button>
           </form>
         </div>
       </div>
