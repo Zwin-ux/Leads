@@ -124,6 +124,10 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                         <span className="action-icon">📞</span>
                         <span className="action-label">Call Now</span>
                     </button>
+                    <button className="action-btn" onClick={() => window.open('https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/r1', '_blank')}>
+                        <span className="action-icon">📤</span>
+                        <span className="action-label">Request Docs</span>
+                    </button>
                     <button className="action-btn" onClick={() => setActiveTab('research')}>
                         <span className="action-icon">✉️</span>
                         <span className="action-label">Draft Email</span>
@@ -140,13 +144,14 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 {/* Tabs */}
                 <div className="modal-tabs">
                     <button className={`tab-btn ${activeTab === 'snapshot' ? 'active' : ''}`} onClick={() => setActiveTab('snapshot')}>Snapshot</button>
-                    <button className={`tab-btn ${activeTab === 'research' ? 'active' : ''}`} onClick={() => setActiveTab('research')}>AI Research</button>
+                    <button className={`tab-btn ${activeTab === 'research' ? 'active' : ''}`} onClick={() => setActiveTab('research')}>AI Assistant</button>
                     <button className={`tab-btn ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')}>Notes</button>
                 </div>
 
                 <div className="modal-body">
                     {activeTab === 'snapshot' && (
                         <div className="snapshot-grid">
+                            {/* ... snapshot content ... */}
                             <div className="snapshot-section">
                                 <h4>Deal Context</h4>
                                 <div className="data-row">
@@ -248,6 +253,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
 
                             <div className="email-composer">
                                 <h3>AI Email Drafter</h3>
+                                <p className="hint">Select a template to generate a draft, then refine it below.</p>
                                 <div className="composer-actions" style={{ marginBottom: '1rem', marginTop: 0 }}>
                                     <button className="secondary" onClick={() => handleGenerateEmail('intro')} disabled={isGenerating}>Borrower Intro</button>
                                     <button className="secondary" onClick={() => handleGenerateEmail('update')} disabled={isGenerating}>Banker Update</button>
@@ -258,13 +264,16 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                 {isGenerating && <p style={{ color: '#059669' }}>Brain is working...</p>}
 
                                 {emailDraft && (
-                                    <>
+                                    <div className="draft-editor" style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', background: 'white' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#64748b' }}>Refine your message:</label>
                                         <textarea
                                             value={emailDraft}
                                             onChange={e => setEmailDraft(e.target.value)}
-                                            rows={8}
+                                            rows={10}
+                                            style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontFamily: 'inherit', fontSize: '0.95rem', lineHeight: '1.5' }}
                                         />
-                                        <div className="composer-actions">
+                                        <div className="composer-actions" style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                            <button className="secondary" onClick={() => setEmailDraft(null)}>Discard</button>
                                             <button
                                                 className="primary"
                                                 onClick={() => {
@@ -274,9 +283,8 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                             >
                                                 Open in Outlook
                                             </button>
-                                            <button className="secondary" onClick={() => setEmailDraft(null)}>Discard</button>
                                         </div>
-                                    </>
+                                    </div>
                                 )}
                             </div>
                         </div>
