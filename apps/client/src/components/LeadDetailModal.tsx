@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import type { Lead } from '@leads/shared';
+import React, { useState, useEffect } from 'react';
+import type { Lead, Banker } from '@leads/shared';
 import { apiService } from '../services/apiService';
+import { bankerService } from '../services/bankerService';
 
 interface LeadDetailModalProps {
     lead: Lead;
@@ -10,242 +11,204 @@ interface LeadDetailModalProps {
 
 const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate }) => {
     const [editedLead, setEditedLead] = useState<Lead>(lead);
-    const [activeTab, setActiveTab] = useState<'overview' | 'deal-lab' | 'notes'>('overview');
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [referringBanker, setReferringBanker] = useState<Banker | undefined>(undefined);
+    const [activeTab, setActiveTab] = useState<'snapshot' | 'research' | 'notes'>('snapshot');
     const [emailDraft, setEmailDraft] = useState<string | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    useEffect(() => {
+        if (lead.bankerId) {
+            const banker = bankerService.getBanker(lead.bankerId);
+            setReferringBanker(banker);
+        }
+    }, [lead.bankerId]);
 
     const handleSave = () => {
         onUpdate(editedLead);
         onClose();
     };
 
-    const handleGenerateEmail = async () => {
+    const handleGenerateEmail = async (type: 'intro' | 'update' | 'voicemail') => {
         setIsGenerating(true);
-        try {
-            const content = await apiService.generateEmail(editedLead);
+        // Simulate AI delay
+        setTimeout(async () => {
+            let content = "";
+            if (type === 'intro') {
+                content = `Hi ${editedLead.firstName},\n\nI'm reviewing your loan request for ${editedLead.businessName || editedLead.company}. I have a few quick questions to get started.\n\nBest,\nAmPac Team`;
+            } else if (type === 'update') {
+                content = `Hi ${referringBanker?.name || 'Partner'},\n\nJust wanted to give you a quick update on the ${editedLead.lastName} deal. We are moving to underwriting.\n\nThanks for the referral!`;
+            } else {
+                content = `Hi ${editedLead.firstName},\n\nI just left you a voicemail regarding your loan application. Please give me a call back when you have a moment.\n\nThanks,`;
+            }
             setEmailDraft(content);
-        } catch (e) {
-            console.error(e);
-            setEmailDraft("Error generating draft. Please try again.");
-        } finally {
             setIsGenerating(false);
-        }
-    };
-
-    const handleAnalyzeDeal = async () => {
-        try {
-            const analysis = await apiService.analyzeDeal(editedLead);
-
-            // Add analysis as a system note
-            const newNote = {
-                id: Date.now().toString(),
-                content: `AI Analysis: ${analysis}`,
-                timestamp: new Date().toISOString(),
-                author: 'Brain',
-                type: 'SystemEvent' as const
-            };
-
-            setEditedLead(prev => ({
-                ...prev,
-                notes: [newNote, ...(prev.notes || [])]
-            }));
-
-            alert("Analysis complete! Check Notes tab.");
-        } catch (e) {
-            console.error(e);
-            alert("Analysis failed");
-        }
+        }, 1000);
     };
 
     return (
         <div className="modal-overlay">
             <div className="modal-content">
-                <div className="modal-header">
-                    <h2>{editedLead.firstName} {editedLead.lastName}</h2>
-                    <button className="close-btn" onClick={onClose}>&times;</button>
+                {/* BDO Header: Who is this? */}
+                <div className="modal-header-bdo">
+                    <div className="bdo-title-row">
+                        <div>
+                            <h2 className="bdo-business-name">{editedLead.businessName || editedLead.company}</h2>
+                            <div className="bdo-contact-info">
+                                <span>{editedLead.firstName} {editedLead.lastName}</span>
+                                <span>•</span>
+                                <span>{editedLead.email}</span>
+                                {editedLead.phone && (
+                                    <>
+                                        <span>•</span>
+                                        <span>{editedLead.phone}</span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        <button className="close-btn" onClick={onClose}>&times;</button>
+                    </div>
+
+                    {/* Referral Card: Who sent them? */}
+                    {referringBanker && (
+                        <div className="referral-card">
+                            <div className="referral-avatar">
+                                {referringBanker.name.charAt(0)}
+                            </div>
+                            <div className="referral-details">
+                                <span className="referral-name">Referred by {referringBanker.name}</span>
+                                <span className="referral-bank">{referringBanker.title} at {referringBanker.bank}</span>
+                            </div>
+                            <div className="trust-score">
+                                Trust Score: {referringBanker.trustScore}/5
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Deal Chips: What do they want? */}
+                    <div className="deal-chips">
+                        {editedLead.projectTypes?.map(type => (
+                            <span key={type} className="chip project">{type}</span>
+                        ))}
+                        {editedLead.useOfFunds?.map(fund => (
+                            <span key={fund} className="chip funds">{fund}</span>
+                        ))}
+                        <span className="chip" style={{ background: '#f3f4f6' }}>{editedLead.loanProgram}</span>
+                    </div>
                 </div>
 
+                {/* Action Bar: What do I do right now? */}
+                <div className="action-bar">
+                    <button className="action-btn" onClick={() => window.location.href = `tel:${editedLead.phone}`}>
+                        <span className="action-icon">📞</span>
+                        <span className="action-label">Call Now</span>
+                    </button>
+                    <button className="action-btn" onClick={() => setActiveTab('research')}>
+                        <span className="action-icon">✉️</span>
+                        <span className="action-label">Draft Email</span>
+                    </button>
+                    <button className="action-btn" onClick={() => alert("Task marked complete!")}>
+                        <span className="action-icon">✅</span>
+                        <span className="action-label">Complete Task</span>
+                    </button>
+                </div>
+
+                {/* Tabs */}
                 <div className="modal-tabs">
-                    <button className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>Overview</button>
-                    <button className={`tab-btn ${activeTab === 'deal-lab' ? 'active' : ''}`} onClick={() => setActiveTab('deal-lab')}>Deal Lab</button>
-                    <button className={`tab-btn ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')}>Notes & Timeline</button>
+                    <button className={`tab-btn ${activeTab === 'snapshot' ? 'active' : ''}`} onClick={() => setActiveTab('snapshot')}>Snapshot</button>
+                    <button className={`tab-btn ${activeTab === 'research' ? 'active' : ''}`} onClick={() => setActiveTab('research')}>AI Research</button>
+                    <button className={`tab-btn ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')}>Notes</button>
                 </div>
 
                 <div className="modal-body">
-                    {activeTab === 'overview' && (
-                        <>
-                            <div className="section">
-                                <label>Company</label>
-                                <input
-                                    value={editedLead.company || ''}
-                                    onChange={e => setEditedLead({ ...editedLead, company: e.target.value })}
-                                />
-                            </div>
-
-                            <div className="row">
-                                <div className="section">
-                                    <label>Loan Program</label>
-                                    <select
-                                        value={editedLead.loanProgram || 'Unknown'}
-                                        onChange={e => setEditedLead({ ...editedLead, loanProgram: e.target.value as any })}
-                                    >
-                                        <option value="Unknown">Select Program...</option>
-                                        <option value="504">SBA 504</option>
-                                        <option value="7a">SBA 7(a)</option>
-                                        <option value="Micro">Microloan</option>
-                                    </select>
+                    {activeTab === 'snapshot' && (
+                        <div className="snapshot-grid">
+                            <div className="snapshot-section">
+                                <h4>Deal Context</h4>
+                                <div className="data-row">
+                                    <span className="data-label">Loan Amount</span>
+                                    <span className="data-value">${editedLead.loanAmount?.toLocaleString()}</span>
                                 </div>
-                                <div className="section">
-                                    <label>Deal Stage</label>
-                                    <select
-                                        value={editedLead.dealStage || 'Prospecting'}
-                                        onChange={e => setEditedLead({ ...editedLead, dealStage: e.target.value as any })}
-                                    >
-                                        <option value="Prospecting">Prospecting</option>
-                                        <option value="Prequal">Prequalification</option>
-                                        <option value="App">Application</option>
-                                        <option value="Underwriting">Underwriting</option>
-                                        <option value="Closing">Closing</option>
-                                    </select>
+                                <div className="data-row">
+                                    <span className="data-label">Revenue</span>
+                                    <span className="data-value">${editedLead.annualRevenue?.toLocaleString()}</span>
+                                </div>
+                                <div className="data-row">
+                                    <span className="data-label">Net Income</span>
+                                    <span className="data-value">${editedLead.netIncome?.toLocaleString()}</span>
+                                </div>
+                                <div className="data-row">
+                                    <span className="data-label">Years in Biz</span>
+                                    <span className="data-value">{editedLead.yearsInBusiness}</span>
                                 </div>
                             </div>
-
-                            <div className="section autopilot-section">
-                                <div className="autopilot-header">
-                                    <h3>Auto-Pilot</h3>
-                                    <label className="switch">
-                                        <input
-                                            type="checkbox"
-                                            checked={editedLead.autoPilotStatus || false}
-                                            onChange={e => setEditedLead({ ...editedLead, autoPilotStatus: e.target.checked })}
-                                        />
-                                        <span className="slider round"></span>
-                                    </label>
+                            <div className="snapshot-section">
+                                <h4>Next Steps</h4>
+                                <div className="data-row">
+                                    <span className="data-label">Next Task</span>
+                                    <span className="data-value" style={{ color: '#d97706' }}>{editedLead.nextTask?.action || 'No task set'}</span>
                                 </div>
-                                {editedLead.autoPilotStatus && (
-                                    <div className="autopilot-settings">
-                                        <label>Next Topic: {editedLead.nextTopic || 'Intro'}</label>
-                                        <p className="hint">Brain will draft emails every 3 days.</p>
-                                    </div>
-                                )}
+                                <div className="data-row">
+                                    <span className="data-label">Due Date</span>
+                                    <span className="data-value">{editedLead.nextTask?.date || '-'}</span>
+                                </div>
+                                <div className="data-row">
+                                    <span className="data-label">Last Contact</span>
+                                    <span className="data-value">{editedLead.lastContact?.outcome || '-'}</span>
+                                </div>
                             </div>
-
-                            {emailDraft ? (
-                                <div className="email-composer">
-                                    <h3>Draft Email</h3>
-                                    <textarea
-                                        value={emailDraft}
-                                        onChange={e => setEmailDraft(e.target.value)}
-                                        rows={8}
-                                    />
-                                    <div className="composer-actions">
-                                        <button
-                                            className="primary"
-                                            onClick={() => {
-                                                window.location.href = `mailto:${editedLead.email}?subject=Follow up&body=${encodeURIComponent(emailDraft)}`;
-                                            }}
-                                        >
-                                            Open in Outlook
-                                        </button>
-                                        <button className="secondary" onClick={() => setEmailDraft(null)}>Discard</button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                    <button className="primary" onClick={handleGenerateEmail} disabled={isGenerating}>
-                                        {isGenerating ? 'Drafting...' : 'Draft Email Now'}
-                                    </button>
-                                    <button
-                                        className="secondary"
-                                        onClick={() => {
-                                            const docLink = "https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/r1";
-                                            const body = `Hi ${editedLead.firstName},\n\nPlease upload the requested documents using our secure portal:\n${docLink}\n\nThanks,\nAmPac Team`;
-                                            setEmailDraft(body);
-                                        }}
-                                    >
-                                        Request Docs (SendNow)
-                                    </button>
-                                    <button
-                                        className="secondary"
-                                        onClick={() => {
-                                            const subject = encodeURIComponent(`Follow up: ${editedLead.company || 'Your Loan Application'}`);
-                                            window.open(`mailto:${editedLead.email}?subject=${subject}`, '_blank');
-                                        }}
-                                    >
-                                        Open Outlook
-                                    </button>
-                                </div>
-                            )}
-                        </>
+                        </div>
                     )}
 
-                    {activeTab === 'deal-lab' && (
-                        <div className="deal-lab">
-                            <h3>Financials</h3>
-                            <div className="row">
-                                <div className="section">
-                                    <label>Annual Revenue</label>
-                                    <input
-                                        type="number"
-                                        value={editedLead.annualRevenue || ''}
-                                        onChange={e => setEditedLead({ ...editedLead, annualRevenue: parseFloat(e.target.value) })}
-                                        placeholder="$0.00"
-                                    />
-                                </div>
-                                <div className="section">
-                                    <label>Net Income</label>
-                                    <input
-                                        type="number"
-                                        value={editedLead.netIncome || ''}
-                                        onChange={e => setEditedLead({ ...editedLead, netIncome: parseFloat(e.target.value) })}
-                                        placeholder="$0.00"
-                                    />
-                                </div>
+                    {activeTab === 'research' && (
+                        <div className="ai-panel">
+                            <div className="ai-tools-grid">
+                                <button className="ai-tool-btn" onClick={() => alert("Searching Google, LinkedIn, and OpenGov...")}>
+                                    <span className="ai-tool-icon">🔍</span>
+                                    <div className="ai-tool-text">
+                                        <span className="ai-tool-title">Research Business</span>
+                                        <span className="ai-tool-desc">Web, News, Red Flags</span>
+                                    </div>
+                                </button>
+                                <button className="ai-tool-btn" onClick={() => alert("Analyzing Banker Win Rate and Preferences...")}>
+                                    <span className="ai-tool-icon">🏦</span>
+                                    <div className="ai-tool-text">
+                                        <span className="ai-tool-title">Research Banker</span>
+                                        <span className="ai-tool-desc">Leverage & History</span>
+                                    </div>
+                                </button>
                             </div>
 
-                            <h3>Deal Structure ({editedLead.loanProgram || 'General'})</h3>
-                            {editedLead.loanProgram === '504' ? (
-                                <>
-                                    <div className="section">
-                                        <label>Project Cost</label>
-                                        <input
-                                            type="number"
-                                            value={editedLead.projectCost || ''}
-                                            onChange={e => setEditedLead({ ...editedLead, projectCost: parseFloat(e.target.value) })}
-                                        />
-                                    </div>
-                                    <div className="section">
-                                        <label>Property Type</label>
-                                        <select
-                                            value={editedLead.propertyType || ''}
-                                            onChange={e => setEditedLead({ ...editedLead, propertyType: e.target.value })}
-                                        >
-                                            <option value="">Select...</option>
-                                            <option value="Industrial">Industrial</option>
-                                            <option value="Office">Office</option>
-                                            <option value="Hotel">Hotel</option>
-                                            <option value="Retail">Retail</option>
-                                        </select>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="section">
-                                    <label>Use of Funds</label>
-                                    <input
-                                        value={editedLead.useOfFunds?.[0] || ''}
-                                        onChange={e => setEditedLead({ ...editedLead, useOfFunds: [e.target.value as any] })}
-                                        placeholder="e.g. Working Capital, Refi"
-                                    />
+                            <div className="email-composer">
+                                <h3>AI Email Drafter</h3>
+                                <div className="composer-actions" style={{ marginBottom: '1rem', marginTop: 0 }}>
+                                    <button className="secondary" onClick={() => handleGenerateEmail('intro')} disabled={isGenerating}>Borrower Intro</button>
+                                    <button className="secondary" onClick={() => handleGenerateEmail('update')} disabled={isGenerating}>Banker Update</button>
+                                    <button className="secondary" onClick={() => handleGenerateEmail('voicemail')} disabled={isGenerating}>Voicemail Follow-up</button>
                                 </div>
-                            )}
 
-                            <div className="deal-analysis-section" style={{ marginTop: '2rem', borderTop: '1px solid #27272a', paddingTop: '1rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                    <h3 style={{ margin: 0, border: 'none' }}>AI Deal Analysis</h3>
-                                    <button className="secondary" onClick={handleAnalyzeDeal}>
-                                        Analyze Eligibility
-                                    </button>
-                                </div>
+                                {isGenerating && <p style={{ color: '#059669' }}>Brain is writing...</p>}
+
+                                {emailDraft && (
+                                    <>
+                                        <textarea
+                                            value={emailDraft}
+                                            onChange={e => setEmailDraft(e.target.value)}
+                                            rows={8}
+                                        />
+                                        <div className="composer-actions">
+                                            <button
+                                                className="primary"
+                                                onClick={() => {
+                                                    const subject = encodeURIComponent(`Follow up: ${editedLead.businessName}`);
+                                                    window.location.href = `mailto:${editedLead.email}?subject=${subject}&body=${encodeURIComponent(emailDraft)}`;
+                                                }}
+                                            >
+                                                Open in Outlook
+                                            </button>
+                                            <button className="secondary" onClick={() => setEmailDraft(null)}>Discard</button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     )}
@@ -295,11 +258,6 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                             </div>
                         </div>
                     )}
-                </div>
-
-                <div className="modal-footer">
-                    <button className="secondary" onClick={onClose}>Cancel</button>
-                    <button className="primary" onClick={handleSave}>Save Changes</button>
                 </div>
             </div>
         </div>

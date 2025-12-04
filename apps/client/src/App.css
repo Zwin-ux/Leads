@@ -444,3 +444,239 @@ textarea:focus {
   padding-top: 0.75rem;
   margin-top: 0.5rem;
 }
+
+/* BDO Call Sheet Overrides */
+.modal-header-bdo {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bdo-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.bdo-business-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.bdo-contact-info {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* Banker Referral Card */
+.referral-card {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.referral-card:hover {
+  border-color: var(--color-accent);
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.referral-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--color-primary);
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.referral-details {
+  flex: 1;
+}
+
+.referral-name {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  display: block;
+}
+
+.referral-bank {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.trust-score {
+  font-size: 0.8rem;
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+/* Deal Chips */
+.deal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.chip {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+}
+
+.chip.project {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  border-color: #bfdbfe;
+}
+
+.chip.funds {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: #bbf7d0;
+}
+
+/* Action Bar */
+.action-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  gap: 0.25rem;
+}
+
+.action-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-icon {
+  font-size: 1.25rem;
+}
+
+.action-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Snapshot View */
+.snapshot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.snapshot-section h4 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--color-text-light);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.9rem;
+}
+
+.data-label {
+  color: var(--color-text-muted);
+}
+
+.data-value {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* AI Research Panel */
+.ai-panel {
+  padding: 1.5rem;
+}
+
+.ai-tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.ai-tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.ai-tool-btn:hover {
+  border-color: var(--color-accent);
+  background: var(--color-surface-hover);
+}
+
+.ai-tool-icon {
+  font-size: 1.5rem;
+}
+
+.ai-tool-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-tool-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.ai-tool-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
