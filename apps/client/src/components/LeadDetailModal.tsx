@@ -294,12 +294,12 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                     </div>
                                 ))}
                                 {(!editedLead.notes || editedLead.notes.length === 0) && (
-                                    <p className="no-notes">No notes yet.</p>
+                                    <p className="no-notes">No notes yet. Start the conversation.</p>
                                 )}
                             </div>
                             <div className="add-note">
                                 <textarea
-                                    placeholder="Add a note..."
+                                    placeholder="Type a note and press Enter..."
                                     onKeyDown={e => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
                                             e.preventDefault();
@@ -310,19 +310,19 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                                 id: Date.now().toString(),
                                                 content,
                                                 timestamp: new Date().toISOString(),
-                                                author: 'You',
+                                                author: 'You', // In real app, use authService.getCurrentUser().name
                                                 type: 'UserNote' as const
                                             };
 
-                                            setEditedLead({
-                                                ...editedLead,
-                                                notes: [newNote, ...(editedLead.notes || [])]
-                                            });
+                                            setEditedLead(prev => ({
+                                                ...prev,
+                                                notes: [newNote, ...(prev.notes || [])]
+                                            }));
                                             e.currentTarget.value = '';
                                         }
                                     }}
                                 />
-                                <p className="hint">Press Enter to add note</p>
+                                <p className="hint">Press <strong>Enter</strong> to save note</p>
                             </div>
                         </div>
                     )}

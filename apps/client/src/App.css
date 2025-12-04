@@ -803,6 +803,81 @@ textarea:focus {
   color: var(--color-text);
 }
 
+/* Notes Tab */
+.notes-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.notes-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1.5rem;
+  padding-right: 0.5rem;
+  max-height: 300px;
+}
+
+.note-item {
+  background: #f9fafb;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.note-item.UserNote {
+  background: #ffffff;
+  border-left: 3px solid var(--color-primary);
+}
+
+.note-item.SystemNote {
+  background: #f3f4f6;
+  border-left: 3px solid var(--color-text-muted);
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.note-author {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.note-time {
+  color: var(--color-text-muted);
+}
+
+.note-content {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.no-notes {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: 2rem;
+}
+
+.add-note textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
 .flags {
   display: flex;
   gap: 0.5rem;
