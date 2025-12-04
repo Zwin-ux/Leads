@@ -1,3 +1,4 @@
+/// <reference path="../google-maps.d.ts" />
 import React, { useState, useEffect, useRef } from 'react';
 import type { Lead } from '@leads/shared';
 
