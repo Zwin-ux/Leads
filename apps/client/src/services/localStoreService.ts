@@ -118,7 +118,9 @@ Looking forward to connecting.
 Best regards,
 [Your Name]
 AmPac Business Capital
-📞 [Your Phone]`;
+
+P.S. If you have any documents ready, you can securely upload them here:
+https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/r1`;
     }
 
     async analyzeDeal(lead: Lead): Promise<string> {

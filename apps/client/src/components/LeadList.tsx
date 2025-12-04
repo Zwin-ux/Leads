@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Lead } from '@leads/shared';
 import { apiService } from '../services/apiService';
+import { openaiService } from '../services/openaiService';
 import { TEAM_MEMBERS } from '../services/authService';
 import LeadDetailModal from './LeadDetailModal';
 import { PipelineView } from './PipelineView';
@@ -19,6 +20,11 @@ const LeadList: React.FC = () => {
     const [leadToTransfer, setLeadToTransfer] = useState<Lead | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator'>('list');
     const [selectedOwner, setSelectedOwner] = useState<string>('All');
+
+    // Email preview state
+    const [emailPreviewLead, setEmailPreviewLead] = useState<Lead | null>(null);
+    const [emailContent, setEmailContent] = useState('');
+    const [generatingEmail, setGeneratingEmail] = useState(false);
 
     useEffect(() => {
         loadLeads();
@@ -154,6 +160,29 @@ const LeadList: React.FC = () => {
         }
     };
 
+    const handleEmailPreview = async (lead: Lead) => {
+        setEmailPreviewLead(lead);
+        setGeneratingEmail(true);
+        try {
+            const content = await openaiService.generateEmail(lead);
+            setEmailContent(content);
+        } catch (err) {
+            console.error("Failed to generate email", err);
+            setEmailContent(`Hi ${lead.firstName},\n\nI'd love to connect about financing options for ${lead.company}.\n\nBest regards`);
+        } finally {
+            setGeneratingEmail(false);
+        }
+    };
+
+    const handleSendToOutlook = () => {
+        if (!emailPreviewLead || !emailContent) return;
+        const subject = encodeURIComponent(`AmPac Business Capital - ${emailPreviewLead.company}`);
+        const body = encodeURIComponent(emailContent);
+        window.open(`mailto:${emailPreviewLead.email}?subject=${subject}&body=${body}`, '_blank');
+        setEmailPreviewLead(null);
+        setEmailContent('');
+    };
+
     const filteredLeads = selectedOwner === 'All'
         ? leads
         : leads.filter(l => l.owner === selectedOwner);
@@ -266,17 +295,30 @@ const LeadList: React.FC = () => {
                             <p className="company">{lead.company}</p>
                             <div className="card-meta-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
                                 {lead.owner && <div className="owner-tag" style={{ fontSize: '0.75rem', color: '#64748b' }}>👤 {lead.owner}</div>}
-                                <button
-                                    className="icon-btn"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setLeadToTransfer(lead);
-                                    }}
-                                    title="Transfer Lead"
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
-                                >
-                                    ➡️
-                                </button>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                    <button
+                                        className="icon-btn"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEmailPreview(lead);
+                                        }}
+                                        title="Draft Email"
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
+                                    >
+                                        📧
+                                    </button>
+                                    <button
+                                        className="icon-btn"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setLeadToTransfer(lead);
+                                        }}
+                                        title="Transfer Lead"
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
+                                    >
+                                        ➡️
+                                    </button>
+                                </div>
                             </div>
                             <div className="card-footer">
                                 <span className="last-contact">Last: {lead.lastContactDate}</span>
@@ -287,8 +329,56 @@ const LeadList: React.FC = () => {
                     ))}
                 </div>
             )}
+
+            {/* Email Preview Modal */}
+            {emailPreviewLead && (
+                <div className="modal-backdrop" onClick={() => setEmailPreviewLead(null)}>
+                    <div className="modal email-preview-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+                        <div className="modal-header">
+                            <h2>📧 Email Preview</h2>
+                            <button className="close-btn" onClick={() => setEmailPreviewLead(null)}>×</button>
+                        </div>
+                        <div className="modal-body" style={{ padding: '1.5rem' }}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <strong>To:</strong> {emailPreviewLead.email}
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <strong>Subject:</strong> AmPac Business Capital - {emailPreviewLead.company}
+                            </div>
+                            {generatingEmail ? (
+                                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                                    ✨ Generating personalized email...
+                                </div>
+                            ) : (
+                                <textarea
+                                    value={emailContent}
+                                    onChange={(e) => setEmailContent(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        minHeight: '300px',
+                                        padding: '1rem',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '8px',
+                                        fontFamily: 'inherit',
+                                        fontSize: '0.95rem',
+                                        lineHeight: '1.6',
+                                        resize: 'vertical'
+                                    }}
+                                />
+                            )}
+                        </div>
+                        <div className="modal-footer" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0' }}>
+                            <button className="btn-secondary" onClick={() => setEmailPreviewLead(null)}>Cancel</button>
+                            <button className="btn-primary" onClick={handleSendToOutlook} disabled={generatingEmail}>
+                                📤 Open in Outlook
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
 export default LeadList;
+
