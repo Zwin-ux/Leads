@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Lead } from '@leads/shared';
 import { apiService } from '../services/apiService';
+import { TEAM_MEMBERS } from '../services/authService';
 import LeadDetailModal from './LeadDetailModal';
 import { PipelineView } from './PipelineView';
 import AddLeadForm from './AddLeadForm';
@@ -14,6 +15,7 @@ const LeadList: React.FC = () => {
     const [showImport, setShowImport] = useState(false);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
+    const [selectedOwner, setSelectedOwner] = useState<string>('All');
 
     useEffect(() => {
         loadLeads();
@@ -82,6 +84,10 @@ const LeadList: React.FC = () => {
         }
     };
 
+    const filteredLeads = selectedOwner === 'All'
+        ? leads
+        : leads.filter(l => l.owner === selectedOwner);
+
     return (
         <div className="lead-list">
             <div className="header">
@@ -90,6 +96,25 @@ const LeadList: React.FC = () => {
                     {loading && <span className="loading-badge">Syncing...</span>}
                 </div>
                 <div className="actions">
+                    <select
+                        value={selectedOwner}
+                        onChange={(e) => setSelectedOwner(e.target.value)}
+                        className="owner-filter"
+                        style={{
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0',
+                            marginRight: '1rem',
+                            background: 'white',
+                            color: '#1e293b'
+                        }}
+                    >
+                        <option value="All">All Team Leads</option>
+                        {TEAM_MEMBERS.map(m => (
+                            <option key={m.email} value={m.name}>{m.name}</option>
+                        ))}
+                    </select>
+
                     <div className="segmented-control">
                         <button
                             className={viewMode === 'list' ? 'active' : ''}
@@ -124,7 +149,7 @@ const LeadList: React.FC = () => {
                 />
             )}
 
-            {!loading && leads.length === 0 ? (
+            {!loading && filteredLeads.length === 0 ? (
                 <div className="empty-state">
                     <img src={logo} alt="AmPac" style={{ height: '80px', opacity: 0.2, marginBottom: '1.5rem', filter: 'grayscale(100%)' }} />
                     <h3>No leads found</h3>
@@ -135,10 +160,10 @@ const LeadList: React.FC = () => {
                     </div>
                 </div>
             ) : viewMode === 'pipeline' ? (
-                <PipelineView leads={leads} onLeadClick={setSelectedLead} onLeadMove={handleLeadMove} />
+                <PipelineView leads={filteredLeads} onLeadClick={setSelectedLead} onLeadMove={handleLeadMove} />
             ) : (
                 <div className="grid">
-                    {leads.map(lead => (
+                    {filteredLeads.map(lead => (
                         <div key={lead.id} className="lead-card" onClick={() => setSelectedLead(lead)}>
                             <div className="card-header">
                                 <h3>{lead.firstName} {lead.lastName}</h3>
@@ -147,6 +172,7 @@ const LeadList: React.FC = () => {
                                 </span>
                             </div>
                             <p className="company">{lead.company}</p>
+                            {lead.owner && <div className="owner-tag" style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem' }}>👤 {lead.owner}</div>}
                             <div className="card-footer">
                                 <span className="last-contact">Last: {lead.lastContactDate}</span>
                                 {lead.nextAction && <span className="next-action">👉 {lead.nextAction}</span>}

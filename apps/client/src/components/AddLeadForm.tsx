@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import type { Lead } from '@leads/shared';
 
+import { TEAM_MEMBERS } from '../services/authService';
+
 const AddLeadForm: React.FC<{ onAdd: (lead: Lead) => void, onCancel: () => void }> = ({ onAdd, onCancel }) => {
     const [formData, setFormData] = useState<Partial<Lead>>({
         stage: 'New',
         dealStage: 'Prospecting',
-        loanProgram: '504'
+        loanProgram: '504',
+        owner: 'Unassigned'
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -16,6 +19,21 @@ const AddLeadForm: React.FC<{ onAdd: (lead: Lead) => void, onCancel: () => void 
     return (
         <form onSubmit={handleSubmit} className="add-lead-form">
             <h3>Add New Lead</h3>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', color: '#a1a1aa', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Assign To</label>
+                <select
+                    value={formData.owner || ''}
+                    onChange={e => setFormData({ ...formData, owner: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '6px', color: '#fff' }}
+                >
+                    <option value="Unassigned">Unassigned</option>
+                    {TEAM_MEMBERS.map(member => (
+                        <option key={member.email} value={member.name}>{member.name}</option>
+                    ))}
+                </select>
+            </div>
+
             <input
                 placeholder="First Name"
                 value={formData.firstName || ''}
