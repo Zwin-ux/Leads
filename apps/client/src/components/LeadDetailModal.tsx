@@ -109,7 +109,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
 
     const handleSendNow = () => {
         // Direct integration link
-        window.open('https://portal.sendnow.com/login', '_blank');
+        window.open('https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/r1', '_blank');
     };
 
     // --- Contact Management ---
