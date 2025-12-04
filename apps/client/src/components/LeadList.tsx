@@ -141,6 +141,19 @@ const LeadList: React.FC = () => {
         }
     };
 
+    const handleDeleteLead = async (leadId: string) => {
+        if (!window.confirm("Are you sure you want to delete this lead? This action cannot be undone.")) return;
+
+        try {
+            await apiService.deleteLead(leadId);
+            setLeads(leads.filter(l => l.id !== leadId));
+            setSelectedLead(null);
+        } catch (err) {
+            console.error("Failed to delete lead", err);
+            alert("Failed to delete lead");
+        }
+    };
+
     const filteredLeads = selectedOwner === 'All'
         ? leads
         : leads.filter(l => l.owner === selectedOwner);
@@ -223,6 +236,7 @@ const LeadList: React.FC = () => {
                     lead={selectedLead}
                     onClose={() => setSelectedLead(null)}
                     onUpdate={handleUpdateLead}
+                    onDelete={handleDeleteLead}
                 />
             )}
 

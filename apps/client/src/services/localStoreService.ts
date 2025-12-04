@@ -49,6 +49,13 @@ export class LocalStoreService {
         throw new Error("Lead not found");
     }
 
+    async deleteLead(userEmail: string, leadId: string): Promise<void> {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const leads = this.getStoredLeads(userEmail);
+        const filtered = leads.filter(l => l.id !== leadId);
+        this.saveLeads(userEmail, filtered);
+    }
+
     async importLeads(userEmail: string, newLeads: Lead[]): Promise<void> {
         await new Promise(resolve => setTimeout(resolve, 1000));
         const leads = this.getStoredLeads(userEmail);

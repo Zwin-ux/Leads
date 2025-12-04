@@ -7,15 +7,26 @@ interface LeadDetailModalProps {
     lead: Lead;
     onClose: () => void;
     onUpdate: (lead: Lead) => void;
+    onDelete?: (leadId: string) => void;
 }
 
-const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate }) => {
+const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate, onDelete }) => {
     const [activeTab, setActiveTab] = useState<'snapshot' | 'research' | 'notes' | 'contacts'>('snapshot');
     const [noteContent, setNoteContent] = useState('');
     const [aiEmail, setAiEmail] = useState('');
     const [aiAnalysis, setAiAnalysis] = useState('');
     const [loadingAi, setLoadingAi] = useState(false);
     const [showTransfer, setShowTransfer] = useState(false);
+
+    // Snapshot Edit State
+    const [isEditingSnapshot, setIsEditingSnapshot] = useState(false);
+    const [snapshotData, setSnapshotData] = useState({
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        email: lead.email,
+        phone: lead.phone,
+        loanProgram: lead.loanProgram
+    });
 
     // Contacts State
     const [contacts, setContacts] = useState<Contact[]>(lead.contacts || []);
@@ -26,7 +37,29 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
     useEffect(() => {
         // Ensure contacts are synced if lead updates
         setContacts(lead.contacts || []);
+        setSnapshotData({
+            firstName: lead.firstName,
+            lastName: lead.lastName,
+            email: lead.email,
+            phone: lead.phone,
+            loanProgram: lead.loanProgram
+        });
     }, [lead]);
+
+    const handleSaveSnapshot = () => {
+        const updatedLead = {
+            ...lead,
+            ...snapshotData
+        };
+        onUpdate(updatedLead);
+        setIsEditingSnapshot(false);
+    };
+
+    const handleDeleteLead = () => {
+        if (onDelete && lead.id) {
+            onDelete(lead.id);
+        }
+    };
 
     const handleSaveNote = async () => {
         if (!noteContent.trim()) return;
@@ -190,6 +223,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                     <div className="header-actions">
                         <button className="btn-secondary" onClick={() => setShowTransfer(true)}>➡️ Transfer</button>
                         <button className="btn-secondary" onClick={handleSendNow}>📤 Request Docs (SendNow)</button>
+                        {onDelete && <button className="btn-icon delete" onClick={handleDeleteLead} title="Delete Lead">🗑️</button>}
                         <button className="close-btn" onClick={onClose}>&times;</button>
                     </div>
                 </div>
@@ -204,22 +238,81 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 <div className="modal-body">
                     {activeTab === 'snapshot' && (
                         <div className="snapshot-view">
+                            <div className="snapshot-header" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                                {isEditingSnapshot ? (
+                                    <div className="edit-actions">
+                                        <button className="btn-text" onClick={() => setIsEditingSnapshot(false)}>Cancel</button>
+                                        <button className="btn-primary" onClick={handleSaveSnapshot}>Save Changes</button>
+                                    </div>
+                                ) : (
+                                    <button className="btn-text" onClick={() => setIsEditingSnapshot(true)}>✏️ Edit Details</button>
+                                )}
+                            </div>
+
                             <div className="info-grid">
                                 <div className="info-item">
-                                    <label>Contact</label>
-                                    <p>{lead.firstName} {lead.lastName}</p>
+                                    <label>First Name</label>
+                                    {isEditingSnapshot ? (
+                                        <input
+                                            value={snapshotData.firstName}
+                                            onChange={e => setSnapshotData({ ...snapshotData, firstName: e.target.value })}
+                                            className="edit-input"
+                                        />
+                                    ) : (
+                                        <p>{lead.firstName}</p>
+                                    )}
+                                </div>
+                                <div className="info-item">
+                                    <label>Last Name</label>
+                                    {isEditingSnapshot ? (
+                                        <input
+                                            value={snapshotData.lastName}
+                                            onChange={e => setSnapshotData({ ...snapshotData, lastName: e.target.value })}
+                                            className="edit-input"
+                                        />
+                                    ) : (
+                                        <p>{lead.lastName}</p>
+                                    )}
                                 </div>
                                 <div className="info-item">
                                     <label>Email</label>
-                                    <p><a href={`mailto:${lead.email}`}>{lead.email}</a></p>
+                                    {isEditingSnapshot ? (
+                                        <input
+                                            value={snapshotData.email}
+                                            onChange={e => setSnapshotData({ ...snapshotData, email: e.target.value })}
+                                            className="edit-input"
+                                        />
+                                    ) : (
+                                        <p><a href={`mailto:${lead.email}`}>{lead.email}</a></p>
+                                    )}
                                 </div>
                                 <div className="info-item">
                                     <label>Phone</label>
-                                    <p>{lead.phone || '--'}</p>
+                                    {isEditingSnapshot ? (
+                                        <input
+                                            value={snapshotData.phone || ''}
+                                            onChange={e => setSnapshotData({ ...snapshotData, phone: e.target.value })}
+                                            className="edit-input"
+                                        />
+                                    ) : (
+                                        <p>{lead.phone || '--'}</p>
+                                    )}
                                 </div>
                                 <div className="info-item">
                                     <label>Program</label>
-                                    <p>{lead.loanProgram || 'SBA 504'}</p>
+                                    {isEditingSnapshot ? (
+                                        <select
+                                            value={snapshotData.loanProgram || 'SBA 504'}
+                                            onChange={e => setSnapshotData({ ...snapshotData, loanProgram: e.target.value as any })}
+                                            className="edit-input"
+                                        >
+                                            <option value="SBA 504">SBA 504</option>
+                                            <option value="SBA 7a">SBA 7a</option>
+                                            <option value="Conventional">Conventional</option>
+                                        </select>
+                                    ) : (
+                                        <p>{lead.loanProgram || 'SBA 504'}</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -320,10 +413,68 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                     {activeTab === 'research' && (
                         <div className="research-view">
                             <div className="ai-card">
-                                <h3>Deal Analysis</h3>
+                                <h3>Deal Analysis & Scoring</h3>
                                 {aiAnalysis ? (
-                                    <div className="analysis-content">
-                                        {aiAnalysis}
+                                    <div className="score-card-container">
+                                        {(() => {
+                                            try {
+                                                const result = JSON.parse(aiAnalysis);
+                                                // If it's the old string format, throw to catch block
+                                                if (typeof result !== 'object') throw new Error();
+
+                                                const getColor = (g: string) => {
+                                                    if (g === 'A') return '#22c55e';
+                                                    if (g === 'B') return '#eab308';
+                                                    return '#ef4444';
+                                                };
+
+                                                return (
+                                                    <div className="score-dashboard">
+                                                        <div className="score-header">
+                                                            <div className="score-gauge" style={{ borderColor: getColor(result.grade) }}>
+                                                                <span className="score-value">{result.score}</span>
+                                                                <span className="score-grade" style={{ color: getColor(result.grade) }}>{result.grade}</span>
+                                                            </div>
+                                                            <div className="score-summary">
+                                                                <h4>{result.recommendation}</h4>
+                                                                <div className="score-bars">
+                                                                    <div className="bar-row">
+                                                                        <label>Industry</label>
+                                                                        <div className="bar-bg"><div className="bar-fill" style={{ width: `${(result.breakdown.industry / 40) * 100}%`, background: '#3b82f6' }}></div></div>
+                                                                    </div>
+                                                                    <div className="bar-row">
+                                                                        <label>Digital</label>
+                                                                        <div className="bar-bg"><div className="bar-fill" style={{ width: `${(result.breakdown.digital / 30) * 100}%`, background: '#8b5cf6' }}></div></div>
+                                                                    </div>
+                                                                    <div className="bar-row">
+                                                                        <label>Data</label>
+                                                                        <div className="bar-bg"><div className="bar-fill" style={{ width: `${(result.breakdown.data / 30) * 100}%`, background: '#ec4899' }}></div></div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="score-factors">
+                                                            <div className="factor-col">
+                                                                <h5>✅ Strengths</h5>
+                                                                <ul>
+                                                                    {result.factors.positive.map((f: string, i: number) => <li key={i}>{f}</li>)}
+                                                                </ul>
+                                                            </div>
+                                                            <div className="factor-col">
+                                                                <h5>❌ Gaps</h5>
+                                                                <ul>
+                                                                    {result.factors.negative.map((f: string, i: number) => <li key={i}>{f}</li>)}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            } catch (e) {
+                                                // Fallback for old text format
+                                                return <div className="analysis-content">{aiAnalysis}</div>;
+                                            }
+                                        })()}
                                     </div>
                                 ) : (
                                     <div className="empty-analysis">
@@ -361,17 +512,16 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                         </div>
                     )}
                 </div>
-            </div>
 
-            {showTransfer && (
-                <TransferLeadModal
-                    lead={lead}
-                    onClose={() => setShowTransfer(false)}
-                    onTransfer={handleTransfer}
-                />
-            )}
+                {showTransfer && (
+                    <TransferLeadModal
+                        lead={lead}
+                        onClose={() => setShowTransfer(false)}
+                        onTransfer={handleTransfer}
+                    />
+                )}
 
-            <style>{`
+                <style>{`
                 .modal-overlay {
                     position: fixed;
                     top: 0; left: 0; right: 0; bottom: 0;
@@ -542,7 +692,64 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                     color: #475569;
                     margin-left: 0.5rem;
                 }
+                
+                .edit-input {
+                    width: 100%;
+                    padding: 6px;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 4px;
+                    font-size: 0.875rem;
+                }
+                .edit-actions {
+                    display: flex;
+                    gap: 0.5rem;
+                }
+
+                /* Score Card Styles */
+                .score-dashboard {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1.5rem;
+                }
+                .score-header {
+                    display: flex;
+                    gap: 2rem;
+                    align-items: center;
+                }
+                .score-gauge {
+                    width: 100px;
+                    height: 100px;
+                    border-radius: 50%;
+                    border: 8px solid #e2e8f0;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    flex-shrink: 0;
+                }
+                .score-value { font-size: 1.5rem; font-weight: 700; color: #1e293b; line-height: 1; }
+                .score-grade { font-size: 1rem; font-weight: 600; margin-top: 4px; }
+                .score-summary { flex: 1; }
+                .score-summary h4 { margin: 0 0 1rem 0; color: #1e293b; }
+                .score-bars { display: flex; flex-direction: column; gap: 0.5rem; }
+                .bar-row { display: flex; align-items: center; gap: 1rem; font-size: 0.875rem; }
+                .bar-row label { width: 60px; color: #64748b; }
+                .bar-bg { flex: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+                .bar-fill { height: 100%; border-radius: 4px; }
+                
+                .score-factors {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1.5rem;
+                    background: #f8fafc;
+                    padding: 1rem;
+                    border-radius: 8px;
+                }
+                .factor-col h5 { margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #475569; }
+                .factor-col ul { margin: 0; padding-left: 1.25rem; }
+                .factor-col li { font-size: 0.875rem; color: #334155; margin-bottom: 0.25rem; }
             `}</style>
+            </div>
         </div>
     );
 };
