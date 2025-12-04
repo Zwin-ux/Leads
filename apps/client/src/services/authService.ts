@@ -21,7 +21,7 @@ const TEAM_MEMBERS: User[] = [
     { name: "Mazen Zwin", email: "MZwin@ampac.com", title: "Developer" }
 ];
 
-const SHARED_PASSWORD = "Mazen";
+const SHARED_PASSWORD = "AmPac@504";
 
 export class AuthService {
     login(email: string, password: string): User | null {
