@@ -232,8 +232,8 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                 <div className="section">
                                     <label>Use of Funds</label>
                                     <input
-                                        value={editedLead.useOfFunds || ''}
-                                        onChange={e => setEditedLead({ ...editedLead, useOfFunds: e.target.value })}
+                                        value={editedLead.useOfFunds?.[0] || ''}
+                                        onChange={e => setEditedLead({ ...editedLead, useOfFunds: [e.target.value as any] })}
                                         placeholder="e.g. Working Capital, Refi"
                                     />
                                 </div>

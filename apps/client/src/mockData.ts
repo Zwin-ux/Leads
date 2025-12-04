@@ -203,7 +203,7 @@ export const mockLeads: Lead[] = [
 
         loanAmount: 5000000,
         projectTypes: ['Expansion', 'Construction'],
-        useOfFunds: ['Building', 'R&D'],
+        useOfFunds: ['Building', 'Other'],
 
         referralSource: 'Direct',
         existingBank: 'Chase',
@@ -240,7 +240,7 @@ export const mockLeads: Lead[] = [
         netIncome: 600000,
 
         loanAmount: 50000,
-        projectTypes: ['Renovation'],
+        projectTypes: ['Construction'],
         useOfFunds: ['Other'],
 
         referralSource: 'Other',
