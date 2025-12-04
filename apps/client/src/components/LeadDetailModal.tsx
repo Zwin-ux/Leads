@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import type { Lead, Banker } from '@leads/shared';
-import { apiService } from '../services/apiService';
 import { bankerService } from '../services/bankerService';
 
 interface LeadDetailModalProps {
@@ -106,7 +105,10 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                         <span className="action-icon">✉️</span>
                         <span className="action-label">Draft Email</span>
                     </button>
-                    <button className="action-btn" onClick={() => alert("Task marked complete!")}>
+                    <button className="action-btn" onClick={() => {
+                        alert("Task marked complete!");
+                        handleSave();
+                    }}>
                         <span className="action-icon">✅</span>
                         <span className="action-label">Complete Task</span>
                     </button>

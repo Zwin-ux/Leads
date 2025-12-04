@@ -52,27 +52,28 @@ function App() {
       <div className="App login-page">
         <div className="login-container">
           <div className="login-header">
-            <h1>AMPAC LEADS</h1>
+            <h1>AmPac Sales Console</h1>
+            <p className="login-subtitle">Authorized Personnel Only</p>
           </div>
           <form onSubmit={handleLogin} className="login-form">
             <div className="form-group">
               <label>Email</label>
               <input
                 type="email"
-                placeholder="name@ampac.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                autoComplete="off"
               />
             </div>
             <div className="form-group">
               <label>Password</label>
               <input
                 type="password"
-                placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                autoComplete="new-password"
               />
             </div>
             {error && <div className="error-message">{error}</div>}
