@@ -58,18 +58,56 @@ export interface EnrichedLead {
 const GOOGLE_PLACES_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY || '';
 const YELP_API_KEY = import.meta.env.VITE_YELP_API_KEY || '';
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
+const SERPAPI_KEY = import.meta.env.SERPAPI_KEY || '';
 
 // Check which sources are available
 export function getAvailableSources(): DataSource[] {
     const sources: DataSource[] = [];
-    if (GOOGLE_PLACES_API_KEY) sources.push('google_places');
+    if (GOOGLE_PLACES_API_KEY || SERPAPI_KEY) sources.push('google_places');
     if (YELP_API_KEY) sources.push('yelp');
     if (OPENAI_API_KEY) sources.push('ai_enriched');
     return sources;
 }
 
 // =====================================================
-// GOOGLE PLACES API
+// SERPAPI GOOGLE MAPS SEARCH (better for frontend)
+// =====================================================
+async function searchSerpAPI(query: string, location: string): Promise<RawBusinessResult[]> {
+    if (!SERPAPI_KEY) return [];
+
+    try {
+        const searchQuery = `${query} in ${location}`;
+        const url = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(searchQuery)}&api_key=${SERPAPI_KEY}`;
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.error('SerpAPI error:', response.status);
+            return [];
+        }
+
+        const data = await response.json();
+
+        return (data.local_results || []).slice(0, 10).map((place: any) => ({
+            source: 'google_places' as DataSource,
+            name: place.title,
+            address: place.address,
+            city: extractCity(place.address),
+            state: extractState(place.address),
+            phone: place.phone,
+            website: place.website,
+            rating: place.rating,
+            reviewCount: place.reviews,
+            categories: place.type ? [place.type] : [],
+            placeId: place.place_id
+        }));
+    } catch (e) {
+        console.error('SerpAPI search failed:', e);
+        return [];
+    }
+}
+
+// =====================================================
+// GOOGLE PLACES API (direct, may have CORS issues)
 // =====================================================
 async function searchGooglePlaces(query: string, location: string): Promise<RawBusinessResult[]> {
     if (!GOOGLE_PLACES_API_KEY) return [];
@@ -322,8 +360,12 @@ export async function searchLeads(
     const rawResults: RawBusinessResult[] = [];
     const usedSources: DataSource[] = [];
 
-    // Phase 1: Google Places (always if available)
-    if (GOOGLE_PLACES_API_KEY) {
+    // Phase 1: Business Search - prefer SerpAPI, fallback to Google Places
+    if (SERPAPI_KEY) {
+        const serpResults = await searchSerpAPI(query, location);
+        rawResults.push(...serpResults);
+        if (serpResults.length > 0) usedSources.push('google_places');
+    } else if (GOOGLE_PLACES_API_KEY) {
         const googleResults = await searchGooglePlaces(query, location);
         rawResults.push(...googleResults);
         if (googleResults.length > 0) usedSources.push('google_places');
