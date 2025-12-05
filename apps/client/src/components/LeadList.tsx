@@ -11,7 +11,7 @@ import logo from '../assets/ampac-logo-v2.png';
 import { LeadScout } from './LeadScout';
 import TransferLeadModal from './TransferLeadModal';
 import { BankerRolodex } from './BankerRolodex';
-import { ManagerDashboard } from './ManagerDashboard';
+import ManagerDashboard from './ManagerDashboard';
 import { ProcessorDashboard } from './ProcessorDashboard';
 import { UnderwriterDashboard } from './UnderwriterDashboard';
 import { BDODashboard } from './BDODashboard';

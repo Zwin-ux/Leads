@@ -141,8 +141,6 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
         onUpdateDocument(doc.id, updates);
     };
 
-
-
     // SBA Expiration Rules Logic
     const EXPIRATION_RULES: Record<string, number> = {
         'appraisal': 365,
@@ -240,6 +238,16 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                                 {doc.requestedDate && doc.status === 'requested' && (
                                     <span className="doc-date">Requested {doc.requestedDate}</span>
                                 )}
+                                {doc.status === 'received' && (
+                                    <div className="doc-validity">
+                                        <label>Doc Date:</label>
+                                        <input
+                                            type="date"
+                                            className="date-input"
+                                            value={doc.documentDate || ''}
+                                            onChange={(e) => onUpdateDocument(doc.id, { documentDate: e.target.value })}
+                                        />
+                                        {(() => {
                                             const status = checkExpiration(doc.type, doc.documentDate);
                                             if (!status) return null;
                                             return (
@@ -266,9 +274,9 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                         </select>
                     </div>
                 ))}
-        </div>
+            </div>
 
-            {/* SendNow link */ }
+            {/* SendNow link */}
             <div className="sendnow-link">
                 <a href={SENDNOW_URL} target="_blank" rel="noopener noreferrer">
                     Secure Upload Portal (SendNow)
@@ -424,6 +432,6 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                     text-decoration: underline;
                 }
             `}</style>
-        </div >
+        </div>
     );
 };

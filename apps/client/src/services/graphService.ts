@@ -59,7 +59,7 @@ export const graphService = {
     // Simulate sending an email via Graph API
     sendEmail: async (to: string, subject: string, body: string): Promise<boolean> => {
         await delay(1200);
-        console.log(`[GraphAPI] Sent email to ${to}: ${subject}`);
+        console.log(`[GraphAPI] Sent email to ${to}: ${subject} - Body length: ${body.length}`);
         return true;
     }
 };
