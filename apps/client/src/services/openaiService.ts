@@ -104,9 +104,15 @@ Context about the lead:
     },
 
     // === ENHANCED BUSINESS SEARCH ===
-    async searchBusinesses(query: string, location: string): Promise<BusinessResult[]> {
+    // Returns { results, isDemoMode } to be transparent about data source
+    async searchBusinesses(query: string, location: string): Promise<{ results: BusinessResult[], isDemoMode: boolean, error?: string }> {
+        // If no API key, be explicit about demo mode with realistic delay
         if (!OPENAI_API_KEY) {
-            return this.getMockBusinesses(query, location);
+            await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
+            return {
+                results: this.getMockBusinesses(query, location),
+                isDemoMode: true
+            };
         }
 
         try {
@@ -153,7 +159,12 @@ Make data realistic for the specified location. Use realistic company names and 
             });
 
             if (!response.ok) {
-                return this.getMockBusinesses(query, location);
+                console.error('OpenAI API error:', response.status);
+                return {
+                    results: [],
+                    isDemoMode: false,
+                    error: `API error (${response.status}). Check your API key.`
+                };
             }
 
             const data = await response.json();
@@ -161,18 +172,30 @@ Make data realistic for the specified location. Use realistic company names and 
 
             try {
                 const businesses = JSON.parse(content.replace(/```json\n?|\n?```/g, ''));
-                return businesses.map((b: any) => ({
-                    ...b,
-                    id: crypto.randomUUID(),
-                    source: 'AI' as const,
-                    confidence: 'medium' as const
-                }));
+                return {
+                    results: businesses.map((b: any) => ({
+                        ...b,
+                        id: crypto.randomUUID(),
+                        source: 'AI' as const,
+                        confidence: 'medium' as const
+                    })),
+                    isDemoMode: false
+                };
             } catch {
-                return this.getMockBusinesses(query, location);
+                console.error('Failed to parse OpenAI response');
+                return {
+                    results: [],
+                    isDemoMode: false,
+                    error: 'Failed to parse results. Try again.'
+                };
             }
         } catch (e) {
-            console.warn('OpenAI search failed:', e);
-            return this.getMockBusinesses(query, location);
+            console.error('OpenAI search failed:', e);
+            return {
+                results: [],
+                isDemoMode: false,
+                error: 'Network error. Check connection.'
+            };
         }
     },
 

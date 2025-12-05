@@ -9,6 +9,8 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [isDemoMode, setIsDemoMode] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const locations = [
         'Riverside, CA',
@@ -30,12 +32,20 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
 
         setLoading(true);
         setSearched(true);
+        setError(null);
+        setIsDemoMode(false);
+
         try {
-            const businesses = await openaiService.searchBusinesses(searchQuery, location);
-            setResults(businesses);
+            const response = await openaiService.searchBusinesses(searchQuery, location);
+            setResults(response.results);
+            setIsDemoMode(response.isDemoMode);
+            if (response.error) {
+                setError(response.error);
+            }
         } catch (err) {
             console.error('Search failed:', err);
             setResults([]);
+            setError('Unexpected error occurred');
         } finally {
             setLoading(false);
         }
@@ -156,7 +166,21 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                     </div>
                 )}
 
-                {!loading && searched && results.length === 0 && (
+                {/* Error Banner */}
+                {!loading && error && (
+                    <div className="error-banner" style={{
+                        padding: '1rem',
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '8px',
+                        color: '#991b1b',
+                        marginBottom: '1rem'
+                    }}>
+                        <strong>Error:</strong> {error}
+                    </div>
+                )}
+
+                {!loading && searched && results.length === 0 && !error && (
                     <div className="empty-state">
                         <p>No businesses found. Try a different search term or location.</p>
                     </div>
@@ -164,8 +188,22 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
 
                 {!loading && results.length > 0 && (
                     <div className="results-grid">
+                        {/* Demo Mode Banner */}
+                        {isDemoMode && (
+                            <div className="demo-banner" style={{
+                                padding: '0.75rem 1rem',
+                                background: '#fefce8',
+                                border: '1px solid #fde047',
+                                borderRadius: '6px',
+                                color: '#854d0e',
+                                marginBottom: '1rem',
+                                fontSize: '0.875rem'
+                            }}>
+                                <strong>Sample Data</strong> — No API key configured. These are example leads for demonstration purposes.
+                            </div>
+                        )}
                         <div className="results-header">
-                            <span>Found {results.length} potential leads</span>
+                            <span>Found {results.length} {isDemoMode ? 'sample' : 'potential'} leads</span>
                             <span className="confidence-legend">
                                 <span style={{ color: '#22c55e' }}>● High</span>
                                 <span style={{ color: '#f59e0b' }}>● Medium</span>
