@@ -4,6 +4,7 @@ import type { User } from "./services/authService";
 import LeadDetail from "./components/LeadDetail";
 import LeadList from "./components/LeadList";
 import { DevRoleSwitcher } from "./components/DevRoleSwitcher";
+import { FeedbackWidget } from "./components/FeedbackWidget";
 import logo from "./assets/ampac-logo-v2.png";
 
 import './App.css';
@@ -155,6 +156,7 @@ function App() {
       </div>
       {isExcel ? <LeadDetail /> : <LeadList />}
       <DevRoleSwitcher />
+      <FeedbackWidget />
     </div>
   );
 }
