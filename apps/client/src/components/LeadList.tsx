@@ -10,6 +10,7 @@ import DropZone from './DropZone';
 import logo from '../assets/ampac-logo-v2.png';
 import { LeadGenerator } from './LeadGenerator';
 import TransferLeadModal from './TransferLeadModal';
+import { BankerRolodex } from './BankerRolodex';
 
 const LeadList: React.FC = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -18,7 +19,7 @@ const LeadList: React.FC = () => {
     const [showImport, setShowImport] = useState(false);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [leadToTransfer, setLeadToTransfer] = useState<Lead | null>(null);
-    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator'>('list');
+    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator' | 'bankers'>('list');
     const [selectedOwner, setSelectedOwner] = useState<string>('All');
 
     // Email preview state
@@ -221,6 +222,22 @@ const LeadList: React.FC = () => {
         return <LeadGenerator onAddLead={handleAddFromGenerator} onCancel={() => setViewMode('list')} />;
     }
 
+    if (viewMode === 'bankers') {
+        return (
+            <div className="lead-list" style={{ padding: '1rem' }}>
+                <div className="header" style={{ marginBottom: '1rem' }}>
+                    <div className="header-title">
+                        <h1>Banker Rolodex</h1>
+                    </div>
+                    <button className="btn-secondary" onClick={() => setViewMode('list')}>
+                        ← Back to Leads
+                    </button>
+                </div>
+                <BankerRolodex />
+            </div>
+        );
+    }
+
     return (
         <div className="lead-list">
             <div className="header">
@@ -247,6 +264,14 @@ const LeadList: React.FC = () => {
                             <option key={m.email} value={m.name}>{m.name}</option>
                         ))}
                     </select>
+
+                    <button
+                        className="btn-secondary"
+                        onClick={() => setViewMode('bankers')}
+                        style={{ marginRight: '0.5rem', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}
+                    >
+                        <span className="icon">🏦</span> Bankers
+                    </button>
 
                     <button
                         className="btn-secondary"

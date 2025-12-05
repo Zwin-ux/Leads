@@ -529,13 +529,20 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                         <div className="partners-view">
                             <BankPartnerPanel
                                 lead={lead}
-                                bankers={[
-                                    // Sample bankers - these would come from a bankers store/API
-                                    { id: 'b1', name: 'John Banker', bank: 'Comerica', branch: 'Riverside', title: 'VP', phone: '', email: '', trustScore: 4, totalFunded: 5000000, lastDealDate: '', notes: '' },
-                                    { id: 'b2', name: 'Sarah Smith', bank: 'Pacific Premier', branch: 'LA', title: 'SVP', phone: '', email: '', trustScore: 5, totalFunded: 8000000, lastDealDate: '', notes: '' },
-                                    { id: 'b3', name: 'Mike Johnson', bank: 'First Republic', branch: 'Newport', title: 'Director', phone: '', email: '', trustScore: 3, totalFunded: 3000000, lastDealDate: '', notes: '' },
-                                    { id: 'b4', name: 'Lisa Wong', bank: 'US Bank', branch: 'San Diego', title: 'VP', phone: '', email: '', trustScore: 4, totalFunded: 6000000, lastDealDate: '', notes: '' },
-                                ]}
+                                bankers={(() => {
+                                    // Load bankers from localStorage (shared with BankerRolodex)
+                                    const stored = localStorage.getItem('leads_bankers_v1');
+                                    if (stored) {
+                                        return JSON.parse(stored);
+                                    }
+                                    // Fallback default bankers
+                                    return [
+                                        { id: 'b1', name: 'John Mitchell', bank: 'Comerica', branch: 'Riverside', title: 'VP Commercial Banking', phone: '951-555-0101', email: 'jmitchell@comerica.com', trustScore: 5, totalFunded: 12500000, lastDealDate: '2024-10-15', notes: 'Great partner.' },
+                                        { id: 'b2', name: 'Sarah Chen', bank: 'Pacific Premier', branch: 'Los Angeles', title: 'SVP', phone: '213-555-0202', email: 'schen@ppbi.com', trustScore: 5, totalFunded: 18200000, lastDealDate: '2024-11-01', notes: 'Top performer.' },
+                                        { id: 'b3', name: 'Mike Thompson', bank: 'First Republic', branch: 'Newport Beach', title: 'Director', phone: '949-555-0303', email: 'mthompson@firstrepublic.com', trustScore: 4, totalFunded: 8500000, lastDealDate: '2024-09-20', notes: 'Good for larger deals.' },
+                                        { id: 'b4', name: 'Lisa Wong', bank: 'US Bank', branch: 'San Diego', title: 'VP SBA Lending', phone: '619-555-0404', email: 'lwong@usbank.com', trustScore: 4, totalFunded: 6800000, lastDealDate: '2024-08-10', notes: 'SBA preferred lender.' },
+                                    ];
+                                })()}
                                 onAddBankPartner={(partner) => {
                                     const partners = lead.bankPartners || [];
                                     onUpdate({ ...lead, bankPartners: [...partners, partner] });
