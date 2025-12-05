@@ -3,6 +3,7 @@ import { authService } from "./services/authService";
 import type { User } from "./services/authService";
 import LeadDetail from "./components/LeadDetail";
 import LeadList from "./components/LeadList";
+import { DevRoleSwitcher } from "./components/DevRoleSwitcher";
 import logo from "./assets/ampac-logo-v2.png";
 
 import './App.css';
@@ -153,6 +154,7 @@ function App() {
         <button onClick={handleLogout} className="logout-btn">Sign Out</button>
       </div>
       {isExcel ? <LeadDetail /> : <LeadList />}
+      <DevRoleSwitcher />
     </div>
   );
 }
