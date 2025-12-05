@@ -5,13 +5,14 @@ interface PipelineViewProps {
     leads: Lead[];
     onLeadClick: (lead: Lead) => void;
     onLeadMove?: (leadId: string, newStage: string) => void;
+    stages?: string[];
 }
 
-const STAGES = ['Prospecting', 'Prequal', 'App', 'Underwriting', 'Closing'];
+const DEFAULT_STAGES = ['Prospecting', 'Prequal', 'App', 'Underwriting', 'Closing'];
 
-export const PipelineView: React.FC<PipelineViewProps> = ({ leads, onLeadClick, onLeadMove }) => {
+export const PipelineView: React.FC<PipelineViewProps> = ({ leads, onLeadClick, onLeadMove, stages = DEFAULT_STAGES }) => {
     const getLeadsByStage = (stage: string) => {
-        return leads.filter(l => (l.dealStage || 'Prospecting') === stage);
+        return leads.filter(l => (l.dealStage === stage) || (l.stage === stage));
     };
 
     const getStageTotal = (stage: string) => {
@@ -40,7 +41,7 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ leads, onLeadClick, 
 
     return (
         <div className="pipeline-container">
-            {STAGES.map(stage => (
+            {stages.map(stage => (
                 <div
                     key={stage}
                     className="pipeline-column"

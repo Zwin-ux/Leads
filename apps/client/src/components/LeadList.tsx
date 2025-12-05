@@ -14,6 +14,8 @@ import { BankerRolodex } from './BankerRolodex';
 import { ManagerDashboard } from './ManagerDashboard';
 import { ProcessorDashboard } from './ProcessorDashboard';
 import { UnderwriterDashboard } from './UnderwriterDashboard';
+import { BDODashboard } from './BDODashboard';
+import { LODashboard } from './LODashboard';
 
 const LeadList: React.FC = () => {
     const currentUser = authService.getCurrentUser();
@@ -26,13 +28,15 @@ const LeadList: React.FC = () => {
     // Determine initial view based on role
     const getInitialView = () => {
         if (!currentUser) return 'list';
+        if (currentUser.role === 'bdo') return 'bdo_dashboard';
+        if (currentUser.role === 'loan_officer') return 'lo_dashboard';
         if (currentUser.role === 'processor') return 'processor_dashboard';
         if (currentUser.role === 'underwriter') return 'underwriter_dashboard';
         if (currentUser.role === 'manager' || currentUser.role === 'admin') return 'dashboard';
         return 'list';
     };
 
-    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator' | 'bankers' | 'dashboard' | 'processor_dashboard' | 'underwriter_dashboard'>(getInitialView());
+    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator' | 'bankers' | 'dashboard' | 'processor_dashboard' | 'underwriter_dashboard' | 'bdo_dashboard' | 'lo_dashboard'>(getInitialView());
     const [selectedOwner, setSelectedOwner] = useState<string>(currentUser?.name || 'All');
     const [filterStale, setFilterStale] = useState(false);
 
@@ -294,6 +298,14 @@ const LeadList: React.FC = () => {
         return <UnderwriterDashboard leads={leads} onUpdateLead={handleUpdateLead} />;
     }
 
+    if (viewMode === 'bdo_dashboard') {
+        return <BDODashboard leads={leads} onUpdateLead={handleUpdateLead} onFindLeads={() => setViewMode('generator')} />;
+    }
+
+    if (viewMode === 'lo_dashboard') {
+        return <LODashboard leads={leads} onUpdateLead={handleUpdateLead} />;
+    }
+
     if (viewMode === 'dashboard') {
         const handleReassignLead = async (leadId: string, newOwner: string) => {
             const leadToUpdate = leads.find(l => l.id === leadId);
@@ -464,7 +476,13 @@ const LeadList: React.FC = () => {
                         }}
                     >🏦 Bankers</button>
                     <button
-                        onClick={() => setViewMode('dashboard')}
+                        onClick={() => {
+                            if (currentUser?.role === 'bdo') setViewMode('bdo_dashboard');
+                            else if (currentUser?.role === 'loan_officer') setViewMode('lo_dashboard');
+                            else if (currentUser?.role === 'processor') setViewMode('processor_dashboard');
+                            else if (currentUser?.role === 'underwriter') setViewMode('underwriter_dashboard');
+                            else setViewMode('dashboard');
+                        }}
                         style={{
                             padding: '0.5rem 1rem',
                             borderRadius: '8px',

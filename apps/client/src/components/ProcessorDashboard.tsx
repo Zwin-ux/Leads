@@ -79,6 +79,47 @@ export const ProcessorDashboard: React.FC<ProcessorDashboardProps> = ({ leads, o
                 </div>
             </div>
 
+            {/* Closing Calendar & Third Party Tracker */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                {/* Closing Calendar */}
+                <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                    <h3 style={{ marginTop: 0, color: '#1e293b', fontSize: '1.1rem' }}>📅 Closing Calendar</h3>
+                    <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                        {[0, 1, 2, 3, 4].map(offset => {
+                            const date = new Date();
+                            date.setDate(date.getDate() + offset * 3); // Mock dates
+                            return (
+                                <div key={offset} style={{ minWidth: '120px', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{date.toLocaleDateString()}</div>
+                                    <div style={{ fontWeight: '600', color: '#1e293b', marginTop: '0.25rem' }}>
+                                        {offset === 1 ? 'Smith Co.' : offset === 3 ? 'TechStart' : 'No Closings'}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Third Party Tracker */}
+                <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                    <h3 style={{ marginTop: 0, color: '#1e293b', fontSize: '1.1rem' }}>📋 Third Party Orders</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                            <span>Appraisals Ordered</span>
+                            <strong style={{ color: '#3b82f6' }}>3</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                            <span>Environmental Pending</span>
+                            <strong style={{ color: '#f59e0b' }}>2</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                            <span>Title Reports Due</span>
+                            <strong style={{ color: '#ef4444' }}>1</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div className="files-list" style={{ background: 'white', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead style={{ background: '#f1f5f9' }}>
