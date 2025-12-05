@@ -58,41 +58,52 @@ export interface EnrichedLead {
 const GOOGLE_PLACES_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY || '';
 const YELP_API_KEY = import.meta.env.VITE_YELP_API_KEY || '';
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
-const SERPAPI_KEY = import.meta.env.VITE_SERPAPI_KEY || '';
+// SERPAPI_KEY is handled by backend proxy, not called directly from frontend
+
+// Backend API URL for proxy (avoids CORS)
+const BACKEND_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Check which sources are available
 export function getAvailableSources(): DataSource[] {
     const sources: DataSource[] = [];
-    if (GOOGLE_PLACES_API_KEY || SERPAPI_KEY) sources.push('google_places');
+    // Always show google_places as available - backend will handle the actual API
+    sources.push('google_places');
     if (YELP_API_KEY) sources.push('yelp');
-    if (OPENAI_API_KEY) sources.push('ai_enriched');
+    sources.push('ai_enriched');  // Backend handles AI too
     return sources;
 }
 
 // =====================================================
-// SERPAPI GOOGLE MAPS SEARCH (better for frontend)
+// BACKEND PROXY SEARCH (avoids CORS issues)
 // =====================================================
-async function searchSerpAPI(query: string, location: string): Promise<RawBusinessResult[]> {
-    if (!SERPAPI_KEY) return [];
-
+async function searchViaBackend(query: string, location: string): Promise<RawBusinessResult[]> {
     try {
-        const searchQuery = `${query} in ${location}`;
-        const url = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(searchQuery)}&api_key=${SERPAPI_KEY}`;
+        const url = `${BACKEND_API_URL}/api/search/businesses?query=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
+
+        console.log('🔍 Searching via backend:', query, 'in', location);
 
         const response = await fetch(url);
+
         if (!response.ok) {
-            console.error('SerpAPI error:', response.status);
+            console.error('Backend search error:', response.status);
             return [];
         }
 
         const data = await response.json();
 
+        if (data.error) {
+            console.error('API error:', data.error);
+            return [];
+        }
+
+        console.log('✅ Found', data.local_results?.length || 0, 'businesses');
+
         return (data.local_results || []).slice(0, 10).map((place: any) => ({
             source: 'google_places' as DataSource,
             name: place.title,
             address: place.address,
-            city: extractCity(place.address),
-            state: extractState(place.address),
+            city: extractCity(place.address || ''),
+            state: extractState(place.address || ''),
             phone: place.phone,
             website: place.website,
             rating: place.rating,
@@ -101,7 +112,7 @@ async function searchSerpAPI(query: string, location: string): Promise<RawBusine
             placeId: place.place_id
         }));
     } catch (e) {
-        console.error('SerpAPI search failed:', e);
+        console.error('Backend search failed:', e);
         return [];
     }
 }
@@ -342,33 +353,24 @@ export async function searchLeads(
     depth: SearchDepth = 'standard'
 ): Promise<SearchResult> {
     const startTime = Date.now();
-    const availableSources = getAvailableSources();
-
-    // If no real sources available, return demo mode
-    if (availableSources.length === 0 || !availableSources.includes('google_places')) {
-        // Simulate realistic delay
-        await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
-        return {
-            leads: getDemoLeads(query, location),
-            sources: [],
-            searchTime: Date.now() - startTime,
-            isDemoMode: true
-        };
-    }
 
     // Collect raw results from available sources
     const rawResults: RawBusinessResult[] = [];
     const usedSources: DataSource[] = [];
 
-    // Phase 1: Business Search - prefer SerpAPI, fallback to Google Places
-    if (SERPAPI_KEY) {
-        const serpResults = await searchSerpAPI(query, location);
-        rawResults.push(...serpResults);
-        if (serpResults.length > 0) usedSources.push('google_places');
-    } else if (GOOGLE_PLACES_API_KEY) {
-        const googleResults = await searchGooglePlaces(query, location);
-        rawResults.push(...googleResults);
-        if (googleResults.length > 0) usedSources.push('google_places');
+    // Phase 1: Business Search via Backend Proxy (handles SerpAPI/CORS)
+    try {
+        const backendResults = await searchViaBackend(query, location);
+        rawResults.push(...backendResults);
+        if (backendResults.length > 0) usedSources.push('google_places');
+    } catch (e) {
+        console.log('Backend unavailable, trying direct APIs...');
+        // Fallback to direct Google Places if backend is down
+        if (GOOGLE_PLACES_API_KEY) {
+            const googleResults = await searchGooglePlaces(query, location);
+            rawResults.push(...googleResults);
+            if (googleResults.length > 0) usedSources.push('google_places');
+        }
     }
 
     // Phase 2: Yelp (for standard and deep)
@@ -396,24 +398,4 @@ export async function searchLeads(
         searchTime: Date.now() - startTime,
         isDemoMode: false
     };
-}
-
-// Demo leads for when no APIs are configured
-function getDemoLeads(query: string, location: string): EnrichedLead[] {
-    const city = location.split(',')[0]?.trim() || 'Riverside';
-    return [
-        {
-            id: crypto.randomUUID(),
-            company: `Sample ${query} Business`,
-            address: '123 Demo Street',
-            city,
-            state: 'CA',
-            industry: query,
-            sbaFit: 'Unknown',
-            sbaFitReason: 'Demo data - configure API keys for real results',
-            leadScore: 50,
-            sources: [],
-            confidence: 'low'
-        }
-    ];
 }
