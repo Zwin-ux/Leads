@@ -6,7 +6,7 @@ import { TEAM_MEMBERS } from '../services/authService';
 const AddLeadForm: React.FC<{ onAdd: (lead: Lead) => void, onCancel: () => void }> = ({ onAdd, onCancel }) => {
     const [formData, setFormData] = useState<Partial<Lead>>({
         stage: 'New',
-        dealStage: 'Prospecting',
+        dealStage: 'Prospect',
         loanProgram: '504',
         owner: 'Unassigned'
     });

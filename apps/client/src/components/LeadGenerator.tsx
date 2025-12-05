@@ -83,7 +83,7 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
             city: business.city,
             stateOfInc: business.state,
             stage: 'New',
-            dealStage: 'Prospecting',
+            dealStage: 'Prospect',
             loanProgram: business.sbaFit === 'Unknown' ? 'Unknown' : business.sbaFit === 'Both' ? '504' : business.sbaFit || 'Unknown',
             owner: 'Unassigned',
             lastContactDate: 'Never',

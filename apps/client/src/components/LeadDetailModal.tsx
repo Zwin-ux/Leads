@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import type { Lead, Contact } from '@leads/shared';
+import type { Lead, Contact, Document } from '@leads/shared';
 import { apiService } from '../services/apiService';
 import TransferLeadModal from './TransferLeadModal';
+import { DocumentChecklist } from './DocumentChecklist';
+import { BankPartnerPanel } from './BankPartnerPanel';
 
 interface LeadDetailModalProps {
     lead: Lead;
@@ -11,7 +13,7 @@ interface LeadDetailModalProps {
 }
 
 const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate, onDelete }) => {
-    const [activeTab, setActiveTab] = useState<'snapshot' | 'research' | 'notes' | 'contacts'>('snapshot');
+    const [activeTab, setActiveTab] = useState<'snapshot' | 'documents' | 'notes' | 'partners' | 'contacts' | 'research'>('snapshot');
     const [noteContent, setNoteContent] = useState('');
     const [noteContext, setNoteContext] = useState<'Call' | 'Email' | 'Meeting' | 'Manual'>('Manual');
     const [aiEmail, setAiEmail] = useState('');
@@ -315,10 +317,12 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 </div>
 
                 <div className="modal-tabs">
-                    <button className={activeTab === 'snapshot' ? 'active' : ''} onClick={() => setActiveTab('snapshot')}>Snapshot</button>
-                    <button className={activeTab === 'contacts' ? 'active' : ''} onClick={() => setActiveTab('contacts')}>Contacts ({contacts.length})</button>
-                    <button className={activeTab === 'research' ? 'active' : ''} onClick={() => setActiveTab('research')}>AI Research</button>
+                    <button className={activeTab === 'snapshot' ? 'active' : ''} onClick={() => setActiveTab('snapshot')}>Deal Info</button>
+                    <button className={activeTab === 'documents' ? 'active' : ''} onClick={() => setActiveTab('documents')}>Documents</button>
                     <button className={activeTab === 'notes' ? 'active' : ''} onClick={() => setActiveTab('notes')}>Notes</button>
+                    <button className={activeTab === 'partners' ? 'active' : ''} onClick={() => setActiveTab('partners')}>Bank Partners</button>
+                    <button className={activeTab === 'contacts' ? 'active' : ''} onClick={() => setActiveTab('contacts')}>Contacts ({contacts.length})</button>
+                    <button className={activeTab === 'research' ? 'active' : ''} onClick={() => setActiveTab('research')}>AI</button>
                 </div>
 
                 <div className="modal-body">
@@ -493,6 +497,61 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                             ) : (
                                 <button className="btn-dashed" onClick={() => setShowAddContact(true)}>+ Add Contact</button>
                             )}
+                        </div>
+                    )}
+
+                    {activeTab === 'documents' && (
+                        <div className="documents-view">
+                            <DocumentChecklist
+                                lead={lead}
+                                onUpdateDocument={(docId, updates) => {
+                                    const docs = lead.documents || [];
+                                    const existingIdx = docs.findIndex(d => d.id === docId);
+                                    let newDocs;
+                                    if (existingIdx >= 0) {
+                                        newDocs = [...docs];
+                                        newDocs[existingIdx] = { ...newDocs[existingIdx], ...updates };
+                                    } else {
+                                        // Add new doc
+                                        newDocs = [...docs, { id: docId, ...updates } as Document];
+                                    }
+                                    onUpdate({ ...lead, documents: newDocs });
+                                }}
+                                onRequestDocs={(_docTypes) => {
+                                    const sendNowUrl = 'https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/r1';
+                                    window.open(sendNowUrl, '_blank');
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    {activeTab === 'partners' && (
+                        <div className="partners-view">
+                            <BankPartnerPanel
+                                lead={lead}
+                                bankers={[
+                                    // Sample bankers - these would come from a bankers store/API
+                                    { id: 'b1', name: 'John Banker', bank: 'Comerica', branch: 'Riverside', title: 'VP', phone: '', email: '', trustScore: 4, totalFunded: 5000000, lastDealDate: '', notes: '' },
+                                    { id: 'b2', name: 'Sarah Smith', bank: 'Pacific Premier', branch: 'LA', title: 'SVP', phone: '', email: '', trustScore: 5, totalFunded: 8000000, lastDealDate: '', notes: '' },
+                                    { id: 'b3', name: 'Mike Johnson', bank: 'First Republic', branch: 'Newport', title: 'Director', phone: '', email: '', trustScore: 3, totalFunded: 3000000, lastDealDate: '', notes: '' },
+                                    { id: 'b4', name: 'Lisa Wong', bank: 'US Bank', branch: 'San Diego', title: 'VP', phone: '', email: '', trustScore: 4, totalFunded: 6000000, lastDealDate: '', notes: '' },
+                                ]}
+                                onAddBankPartner={(partner) => {
+                                    const partners = lead.bankPartners || [];
+                                    onUpdate({ ...lead, bankPartners: [...partners, partner] });
+                                }}
+                                onUpdateBankPartner={(bankerId, updates) => {
+                                    const partners = lead.bankPartners || [];
+                                    const newPartners = partners.map(p =>
+                                        p.bankerId === bankerId ? { ...p, ...updates } : p
+                                    );
+                                    onUpdate({ ...lead, bankPartners: newPartners });
+                                }}
+                                onRemoveBankPartner={(bankerId) => {
+                                    const partners = lead.bankPartners || [];
+                                    onUpdate({ ...lead, bankPartners: partners.filter(p => p.bankerId !== bankerId) });
+                                }}
+                            />
                         </div>
                     )}
 
