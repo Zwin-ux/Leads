@@ -8,7 +8,7 @@ import { PipelineView } from './PipelineView';
 import AddLeadForm from './AddLeadForm';
 import DropZone from './DropZone';
 import logo from '../assets/ampac-logo-v2.png';
-import { LeadGenerator } from './LeadGenerator';
+import { LeadScout } from './LeadScout';
 import TransferLeadModal from './TransferLeadModal';
 import { BankerRolodex } from './BankerRolodex';
 import { ManagerDashboard } from './ManagerDashboard';
@@ -273,12 +273,10 @@ const LeadList: React.FC = () => {
 
     if (viewMode === 'generator') {
         return (
-            <div className="lead-list" style={{ padding: '1rem' }}>
-                <LeadGenerator
-                    onAddLead={handleAddFromGenerator}
-                    onCancel={() => setViewMode('list')}
-                />
-            </div>
+            <LeadScout
+                onAddLead={handleAddFromGenerator}
+                onCancel={() => setViewMode('list')}
+            />
         );
     }
 

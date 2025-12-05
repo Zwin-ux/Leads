@@ -45,7 +45,7 @@ export const ProcessorDashboard: React.FC<ProcessorDashboardProps> = ({ leads, o
         <div className="processor-dashboard" style={{ padding: '2rem', background: '#f8fafc', minHeight: '100vh' }}>
             <div className="header" style={{ marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '1.8rem', color: '#1e293b', marginBottom: '0.5rem' }}>
-                    📑 The Chase List
+                    📂 Processing Queue
                 </h1>
                 <p style={{ color: '#64748b' }}>
                     Welcome back, {currentUser?.name.split(' ')[0]}. You have <strong>{processingLeads.length}</strong> active files.
@@ -87,13 +87,23 @@ export const ProcessorDashboard: React.FC<ProcessorDashboardProps> = ({ leads, o
                     <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
                         {[0, 1, 2, 3, 4].map(offset => {
                             const date = new Date();
-                            date.setDate(date.getDate() + offset * 3); // Mock dates
+                            date.setDate(date.getDate() + offset * 3);
+                            // Mock logic to show specific companies on specific days for demo
+                            const closingCompany = offset === 1 ? 'Global Logistics' : offset === 3 ? 'City Bistro' : null;
+
                             return (
-                                <div key={offset} style={{ minWidth: '120px', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{date.toLocaleDateString()}</div>
-                                    <div style={{ fontWeight: '600', color: '#1e293b', marginTop: '0.25rem' }}>
-                                        {offset === 1 ? 'Smith Co.' : offset === 3 ? 'TechStart' : 'No Closings'}
+                                <div key={offset} style={{
+                                    minWidth: '140px',
+                                    padding: '1rem',
+                                    background: closingCompany ? '#f3e8ff' : '#f8fafc',
+                                    borderRadius: '8px',
+                                    border: closingCompany ? '1px solid #d8b4fe' : '1px solid #e2e8f0'
+                                }}>
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
+                                    <div style={{ fontWeight: '600', color: closingCompany ? '#6b21a8' : '#94a3b8', marginTop: '0.25rem' }}>
+                                        {closingCompany || 'No Closings'}
                                     </div>
+                                    {closingCompany && <div style={{ fontSize: '0.75rem', color: '#7e22ce', marginTop: '0.25rem' }}>Confirmed</div>}
                                 </div>
                             );
                         })}
@@ -104,17 +114,17 @@ export const ProcessorDashboard: React.FC<ProcessorDashboardProps> = ({ leads, o
                 <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
                     <h3 style={{ marginTop: 0, color: '#1e293b', fontSize: '1.1rem' }}>📋 Third Party Orders</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                            <span>Appraisals Ordered</span>
-                            <strong style={{ color: '#3b82f6' }}>3</strong>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '0.5rem', background: '#f0f9ff', borderRadius: '6px' }}>
+                            <span style={{ color: '#0369a1' }}>Appraisals Ordered</span>
+                            <strong style={{ color: '#0284c7' }}>3</strong>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                            <span>Environmental Pending</span>
-                            <strong style={{ color: '#f59e0b' }}>2</strong>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '0.5rem', background: '#fffbeb', borderRadius: '6px' }}>
+                            <span style={{ color: '#b45309' }}>Environmental Pending</span>
+                            <strong style={{ color: '#d97706' }}>2</strong>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                            <span>Title Reports Due</span>
-                            <strong style={{ color: '#ef4444' }}>1</strong>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '0.5rem', background: '#fef2f2', borderRadius: '6px' }}>
+                            <span style={{ color: '#b91c1c' }}>Title Reports Due</span>
+                            <strong style={{ color: '#dc2626' }}>1</strong>
                         </div>
                     </div>
                 </div>

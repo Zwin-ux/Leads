@@ -96,7 +96,7 @@ export interface Lead {
     businessName?: string; // Legal Name
 
     // Core Status
-    stage: 'New' | 'Contacted' | 'Warm' | 'In Process' | 'Not a Fit';
+    stage: 'New' | 'Contacted' | 'Warm' | 'Qualified' | 'Proposal' | 'Negotiation' | 'In Process' | 'Not a Fit';
 
     // Business Details
     stateOfInc?: string;

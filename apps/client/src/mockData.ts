@@ -42,4 +42,95 @@ export const mockBankers: Banker[] = [
     }
 ];
 
-export const mockLeads: Lead[] = [];
+export const mockLeads: Lead[] = [
+    {
+        id: 'l1',
+        company: 'Acme Manufacturing',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@acme.com',
+        phone: '555-0101',
+        stage: 'New',
+        dealStage: undefined,
+        loanAmount: 1500000,
+        loanProgram: '504',
+        lastContactDate: new Date().toISOString(),
+        owner: 'Mazen Zwin',
+        notes: []
+    },
+    {
+        id: 'l2',
+        company: 'TechStart Inc',
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'jane@techstart.com',
+        phone: '555-0102',
+        stage: 'Qualified',
+        dealStage: 'Processing',
+        loanAmount: 750000,
+        loanProgram: '7a',
+        lastContactDate: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+        owner: 'Mazen Zwin',
+        notes: []
+    },
+    {
+        id: 'l3',
+        company: 'Green Earth Landscaping',
+        firstName: 'Mike',
+        lastName: 'Johnson',
+        email: 'mike@greenearth.com',
+        phone: '555-0103',
+        stage: 'In Process',
+        dealStage: 'Underwriting',
+        loanAmount: 3200000,
+        loanProgram: '504',
+        lastContactDate: new Date(Date.now() - 86400000 * 5).toISOString(), // 5 days ago
+        owner: 'Mazen Zwin',
+        notes: []
+    },
+    {
+        id: 'l4',
+        company: 'City Bistro',
+        firstName: 'Sarah',
+        lastName: 'Connor',
+        email: 'sarah@bistro.com',
+        phone: '555-0104',
+        stage: 'Proposal',
+        dealStage: 'Approved',
+        loanAmount: 500000,
+        loanProgram: '7a',
+        lastContactDate: new Date(Date.now() - 86400000 * 1).toISOString(), // 1 day ago
+        owner: 'Mazen Zwin',
+        notes: []
+    },
+    {
+        id: 'l5',
+        company: 'Global Logistics',
+        firstName: 'Robert',
+        lastName: 'Chen',
+        email: 'robert@global.com',
+        phone: '555-0105',
+        stage: 'Negotiation',
+        dealStage: 'Closing',
+        loanAmount: 2100000,
+        loanProgram: '504',
+        lastContactDate: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+        owner: 'Mazen Zwin',
+        notes: []
+    },
+    {
+        id: 'l6',
+        company: 'Stale Lead Corp',
+        firstName: 'Gary',
+        lastName: 'Oldman',
+        email: 'gary@stale.com',
+        phone: '555-0106',
+        stage: 'New',
+        dealStage: undefined,
+        loanAmount: 100000,
+        loanProgram: '7a',
+        lastContactDate: new Date(Date.now() - 86400000 * 15).toISOString(), // 15 days ago
+        owner: 'Mazen Zwin',
+        notes: []
+    }
+];

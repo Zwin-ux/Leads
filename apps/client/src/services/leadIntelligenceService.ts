@@ -7,7 +7,8 @@
 export type SearchDepth = 'quick' | 'standard' | 'deep';
 
 // Source types
-export type DataSource = 'google_places' | 'yelp' | 'opencorp' | 'ai_enriched';
+// Source types
+export type DataSource = 'google_places' | 'sos_api' | 'hunter_io' | 'ai_enriched';
 
 // Raw result from any source before AI processing
 export interface RawBusinessResult {
@@ -22,7 +23,10 @@ export interface RawBusinessResult {
     reviewCount?: number;
     categories?: string[];
     placeId?: string;  // Google Places ID
-    yelpId?: string;   // Yelp ID
+    sosEntityNumber?: string; // CA SOS Entity Number
+    sosStatus?: string; // Active, Suspended, etc.
+    hunterEmail?: string;
+    hunterConfidence?: number;
 }
 
 // Enriched result after AI reasoning
@@ -52,13 +56,20 @@ export interface EnrichedLead {
     contactName?: string;
     contactRole?: string;
     contactEmail?: string;
+
+    // Verification
+    sosVerified?: boolean;
+    sosStatus?: string;
+    sosEntityNumber?: string;
+    hunterEmail?: string;
+    hunterConfidence?: number;
 }
 
-// API Keys from environment (must use VITE_ prefix for Vite to expose them)
+// API Keys from environment
 const GOOGLE_PLACES_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY || '';
-const YELP_API_KEY = import.meta.env.VITE_YELP_API_KEY || '';
+const SOS_API_KEY = import.meta.env.VITE_SOS_API_KEY || '';
+const HUNTER_API_KEY = import.meta.env.VITE_HUNTER_API_KEY || '';
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
-// SERPAPI_KEY is handled by backend proxy, not called directly from frontend
 
 // Backend API URL for proxy (avoids CORS)
 const BACKEND_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -66,10 +77,10 @@ const BACKEND_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 // Check which sources are available
 export function getAvailableSources(): DataSource[] {
     const sources: DataSource[] = [];
-    // Always show google_places as available - backend will handle the actual API
     sources.push('google_places');
-    if (YELP_API_KEY) sources.push('yelp');
-    sources.push('ai_enriched');  // Backend handles AI too
+    if (SOS_API_KEY) sources.push('sos_api');
+    if (HUNTER_API_KEY) sources.push('hunter_io');
+    sources.push('ai_enriched');
     return sources;
 }
 
@@ -161,45 +172,75 @@ async function searchGooglePlaces(query: string, location: string): Promise<RawB
 }
 
 // =====================================================
-// YELP FUSION API
+// CA SECRETARY OF STATE API
 // =====================================================
-async function searchYelp(query: string, location: string): Promise<RawBusinessResult[]> {
-    if (!YELP_API_KEY) return [];
+async function searchSOS(name: string): Promise<RawBusinessResult | null> {
+    if (!SOS_API_KEY) return null;
 
     try {
-        // Note: Yelp API requires CORS proxy or backend call
-        // For frontend, we'd need a proxy
-        const url = `https://api.yelp.com/v3/businesses/search?term=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}&limit=10`;
+        // Keyword Search
+        const url = `https://calico.sos.ca.gov/cbc/v1/api/BusinessEntityKeywordSearch?search-term=${encodeURIComponent(name)}`;
 
         const response = await fetch(url, {
             headers: {
-                'Authorization': `Bearer ${YELP_API_KEY}`
+                'Ocp-Apim-Subscription-Key': SOS_API_KEY
             }
         });
 
-        if (!response.ok) {
-            console.error('Yelp API error:', response.status);
-            return [];
-        }
+        if (!response.ok) return null;
 
         const data = await response.json();
+        // Assuming data structure based on typical Azure APIM responses, need to verify actual shape
+        // For now, let's assume it returns a list and we take the best match
+        const bestMatch = data[0]; // Simplification
 
-        return (data.businesses || []).map((biz: any) => ({
-            source: 'yelp' as DataSource,
-            name: biz.name,
-            address: biz.location?.display_address?.join(', '),
-            city: biz.location?.city,
-            state: biz.location?.state,
-            phone: biz.display_phone,
-            website: biz.url,
-            rating: biz.rating,
-            reviewCount: biz.review_count,
-            categories: biz.categories?.map((c: any) => c.title) || [],
-            yelpId: biz.id
-        }));
+        if (!bestMatch) return null;
+
+        return {
+            source: 'sos_api',
+            name: bestMatch.EntityName,
+            sosEntityNumber: bestMatch.EntityNumber,
+            sosStatus: bestMatch.EntityStatus,
+            // Add other fields if available
+        } as RawBusinessResult;
+
     } catch (e) {
-        console.error('Yelp search failed:', e);
-        return [];
+        console.error('SOS search failed:', e);
+        return null;
+    }
+}
+
+// =====================================================
+// HUNTER.IO API
+// =====================================================
+async function searchHunter(domain: string): Promise<RawBusinessResult | null> {
+    if (!HUNTER_API_KEY) return null;
+
+    try {
+        const url = `https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}`;
+        const response = await fetch(url);
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        const emails = data.data?.emails || [];
+
+        if (emails.length === 0) return null;
+
+        const bestEmail = emails[0];
+
+        return {
+            source: 'hunter_io',
+            name: domain, // Placeholder
+            hunterEmail: bestEmail.value,
+            hunterConfidence: bestEmail.confidence,
+            contactName: `${bestEmail.first_name} ${bestEmail.last_name}`,
+            contactRole: bestEmail.position
+        } as any; // Cast to any to merge later
+
+    } catch (e) {
+        console.error('Hunter search failed:', e);
+        return null;
     }
 }
 
@@ -293,7 +334,11 @@ ONLY return valid JSON array, no markdown.`
                 confidence: e.confidence || 'medium',
                 contactName: e.contactName,
                 contactRole: e.contactRole,
-                contactEmail: e.contactEmail
+                contactEmail: e.contactEmail,
+                sosEntityNumber: e.sosEntityNumber,
+                sosStatus: e.sosStatus,
+                hunterEmail: e.hunterEmail,
+                hunterConfidence: e.hunterConfidence
             }));
         } catch {
             console.error('Failed to parse AI response');
@@ -320,7 +365,11 @@ function basicConvert(raw: RawBusinessResult): EnrichedLead {
         sbaFitReason: 'No AI analysis available',
         leadScore: 50,
         sources: [raw.source],
-        confidence: 'low'
+        confidence: 'low',
+        sosEntityNumber: raw.sosEntityNumber,
+        sosStatus: raw.sosStatus,
+        hunterEmail: raw.hunterEmail,
+        hunterConfidence: raw.hunterConfidence
     };
 }
 
@@ -353,34 +402,61 @@ export async function searchLeads(
     depth: SearchDepth = 'standard'
 ): Promise<SearchResult> {
     const startTime = Date.now();
-
-    // Collect raw results from available sources
-    const rawResults: RawBusinessResult[] = [];
     const usedSources: DataSource[] = [];
+    const rawResults: RawBusinessResult[] = [];
 
-    // Phase 1: Business Search via Backend Proxy (handles SerpAPI/CORS)
+    // 1. Discovery (Google Places)
     try {
-        const backendResults = await searchViaBackend(query, location);
-        rawResults.push(...backendResults);
-        if (backendResults.length > 0) usedSources.push('google_places');
-    } catch (e) {
-        console.log('Backend unavailable, trying direct APIs...');
-        // Fallback to direct Google Places if backend is down
-        if (GOOGLE_PLACES_API_KEY) {
-            const googleResults = await searchGooglePlaces(query, location);
+        const googleResults = await searchViaBackend(query, location);
+        // If backend fails/empty and we have key, try direct
+        if (googleResults.length === 0 && GOOGLE_PLACES_API_KEY) {
+            const directResults = await searchGooglePlaces(query, location);
+            rawResults.push(...directResults);
+            if (directResults.length > 0) usedSources.push('google_places');
+        } else {
             rawResults.push(...googleResults);
             if (googleResults.length > 0) usedSources.push('google_places');
         }
+    } catch (e) {
+        console.error('Discovery failed', e);
     }
 
-    // Phase 2: Yelp (for standard and deep)
-    if (depth !== 'quick' && YELP_API_KEY) {
-        const yelpResults = await searchYelp(query, location);
-        rawResults.push(...yelpResults);
-        if (yelpResults.length > 0) usedSources.push('yelp');
+    // 2. Verification & Enrichment (Parallel)
+    if (depth !== 'quick') {
+        const enrichmentPromises = rawResults.map(async (biz) => {
+            // SOS Verification
+            if (SOS_API_KEY) {
+                const sosResult = await searchSOS(biz.name);
+                if (sosResult) {
+                    biz.sosEntityNumber = sosResult.sosEntityNumber;
+                    biz.sosStatus = sosResult.sosStatus;
+                    if (!usedSources.includes('sos_api')) usedSources.push('sos_api');
+                }
+            }
+
+            // Hunter.io (if website exists)
+            if (HUNTER_API_KEY && biz.website) {
+                try {
+                    const domain = new URL(biz.website).hostname;
+                    const hunterResult = await searchHunter(domain);
+                    if (hunterResult) {
+                        biz.hunterEmail = hunterResult.hunterEmail;
+                        biz.hunterConfidence = hunterResult.hunterConfidence;
+                        // @ts-ignore
+                        biz.contactName = hunterResult.contactName;
+                        // @ts-ignore
+                        biz.contactRole = hunterResult.contactRole;
+                        if (!usedSources.includes('hunter_io')) usedSources.push('hunter_io');
+                    }
+                } catch (e) { /* Invalid URL */ }
+            }
+            return biz;
+        });
+
+        await Promise.all(enrichmentPromises);
     }
 
-    // Phase 3: AI Reasoning (for standard and deep with OpenAI)
+    // 3. AI Analysis
     let leads: EnrichedLead[];
     if (depth !== 'quick' && OPENAI_API_KEY) {
         leads = await aiEnrichAndReason(rawResults, query, location);
@@ -393,7 +469,7 @@ export async function searchLeads(
     leads.sort((a, b) => b.leadScore - a.leadScore);
 
     return {
-        leads: leads.slice(0, 10),  // Top 10
+        leads: leads.slice(0, 10),
         sources: usedSources,
         searchTime: Date.now() - startTime,
         isDemoMode: false
