@@ -54,11 +54,11 @@ export interface EnrichedLead {
     contactEmail?: string;
 }
 
-// API Keys from environment
+// API Keys from environment (must use VITE_ prefix for Vite to expose them)
 const GOOGLE_PLACES_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY || '';
 const YELP_API_KEY = import.meta.env.VITE_YELP_API_KEY || '';
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
-const SERPAPI_KEY = import.meta.env.SERPAPI_KEY || '';
+const SERPAPI_KEY = import.meta.env.VITE_SERPAPI_KEY || '';
 
 // Check which sources are available
 export function getAvailableSources(): DataSource[] {

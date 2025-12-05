@@ -396,9 +396,9 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
 
             <style>{`
                 .lead-generator {
-                    padding: 2rem;
-                    background: #f8fafc;
-                    height: 100%;
+                    padding: 0;
+                    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+                    min-height: 100vh;
                     display: flex;
                     flex-direction: column;
                     overflow: hidden;
@@ -407,26 +407,44 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                     display: flex;
                     align-items: center;
                     gap: 1rem;
-                    margin-bottom: 1.5rem;
+                    padding: 1.5rem 2rem;
+                    background: rgba(255,255,255,0.05);
+                    backdrop-filter: blur(10px);
+                    border-bottom: 1px solid rgba(255,255,255,0.1);
+                }
+                .generator-header h2 {
+                    color: white;
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    margin: 0;
+                    background: linear-gradient(90deg, #22d3ee, #a78bfa);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
                 }
                 .generator-header .subtitle {
-                    color: #64748b;
+                    color: rgba(255,255,255,0.6);
                     font-size: 0.9rem;
                     margin-left: auto;
                 }
                 .back-btn {
-                    background: none;
-                    border: none;
-                    color: var(--text-secondary);
+                    background: rgba(255,255,255,0.1);
+                    border: 1px solid rgba(255,255,255,0.2);
+                    color: white;
                     cursor: pointer;
-                    font-size: 1rem;
+                    font-size: 0.9rem;
+                    padding: 0.5rem 1rem;
+                    border-radius: 8px;
+                    transition: all 0.2s;
+                }
+                .back-btn:hover {
+                    background: rgba(255,255,255,0.2);
                 }
                 .search-section {
-                    background: white;
-                    padding: 1.5rem;
-                    border-radius: 12px;
-                    margin-bottom: 1.5rem;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                    background: rgba(255,255,255,0.95);
+                    padding: 1.5rem 2rem;
+                    margin: 1.5rem 2rem;
+                    border-radius: 16px;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
                 }
                 .search-row {
                     display: flex;
@@ -435,21 +453,47 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                 }
                 .search-input {
                     flex: 1;
-                    padding: 0.75rem 1rem;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 8px;
+                    padding: 0.875rem 1.25rem;
+                    border: 2px solid #e2e8f0;
+                    border-radius: 12px;
                     font-size: 1rem;
+                    transition: all 0.2s;
+                }
+                .search-input:focus {
+                    outline: none;
+                    border-color: #3b82f6;
+                    box-shadow: 0 0 0 4px rgba(59,130,246,0.1);
+                }
+                .location-select, .depth-select {
+                    padding: 0.875rem 1rem;
+                    border: 2px solid #e2e8f0;
+                    border-radius: 12px;
+                    font-size: 1rem;
+                    background: white;
+                    cursor: pointer;
                 }
                 .location-select {
-                    padding: 0.75rem 1rem;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 8px;
-                    font-size: 1rem;
                     min-width: 180px;
                 }
                 .search-btn {
-                    padding: 0.75rem 1.5rem;
-                    white-space: nowrap;
+                    padding: 0.875rem 2rem;
+                    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+                    border: none;
+                    border-radius: 12px;
+                    color: white;
+                    font-weight: 600;
+                    font-size: 1rem;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+                }
+                .search-btn:hover:not(:disabled) {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(59,130,246,0.4);
+                }
+                .search-btn:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
                 }
                 .quick-tags {
                     display: flex;
@@ -532,20 +576,22 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                     display: flex;
                     flex-direction: column;
                     gap: 1rem;
+                    padding: 0 2rem 2rem;
                 }
                 .result-card {
                     background: white;
-                    border-radius: 12px;
-                    border: 1px solid #e2e8f0;
-                    transition: all 0.2s;
+                    border-radius: 16px;
+                    border: none;
+                    transition: all 0.3s ease;
                     overflow: hidden;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
                 }
                 .result-card:hover {
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                    border-color: var(--primary);
+                    transform: translateY(-4px);
+                    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
                 }
                 .result-card.expanded {
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
                 }
                 .result-main {
                     padding: 1.25rem;
