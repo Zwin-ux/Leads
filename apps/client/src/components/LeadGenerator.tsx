@@ -1,16 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Lead } from '@leads/shared';
-import { openaiService, type BusinessResult } from '../services/openaiService';
+import {
+    searchLeads,
+    getAvailableSources,
+    type EnrichedLead,
+    type SearchDepth,
+    type DataSource
+} from '../services/leadIntelligenceService';
 
 export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel: () => void }> = ({ onAddLead, onCancel }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [location, setLocation] = useState('Riverside, CA');
-    const [results, setResults] = useState<BusinessResult[]>([]);
+    const [results, setResults] = useState<EnrichedLead[]>([]);
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isDemoMode, setIsDemoMode] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // New: Depth selector and source info
+    const [depth, setDepth] = useState<SearchDepth>('standard');
+    const [usedSources, setUsedSources] = useState<DataSource[]>([]);
+    const [searchTime, setSearchTime] = useState(0);
+    const [availableSources, setAvailableSources] = useState<DataSource[]>([]);
+
+    // Check what sources are configured
+    useEffect(() => {
+        setAvailableSources(getAvailableSources());
+    }, []);
 
     const locations = [
         'Riverside, CA',
@@ -36,9 +53,11 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
         setIsDemoMode(false);
 
         try {
-            const response = await openaiService.searchBusinesses(searchQuery, location);
-            setResults(response.results);
+            const response = await searchLeads(searchQuery, location, depth);
+            setResults(response.leads);
             setIsDemoMode(response.isDemoMode);
+            setUsedSources(response.sources);
+            setSearchTime(response.searchTime);
             if (response.error) {
                 setError(response.error);
             }
@@ -51,18 +70,18 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
         }
     };
 
-    const handleAddLead = (business: BusinessResult) => {
+    const handleAddLead = (business: EnrichedLead) => {
         const newLead: Lead = {
             id: business.id || crypto.randomUUID(),
-            firstName: business.firstName || 'Unknown',
-            lastName: business.lastName || 'Contact',
-            email: business.email || 'info@example.com',
+            firstName: business.contactName?.split(' ')[0] || 'Unknown',
+            lastName: business.contactName?.split(' ').slice(1).join(' ') || 'Contact',
+            email: business.contactEmail || 'info@example.com',
             phone: business.phone || '',
             company: business.company,
             businessName: business.legalName || business.company,
             industry: business.industry,
             city: business.city,
-            stateOfInc: business.stateOfInc,
+            stateOfInc: business.state,
             stage: 'New',
             dealStage: 'Prospecting',
             loanProgram: business.sbaFit === 'Unknown' ? 'Unknown' : business.sbaFit === 'Both' ? '504' : business.sbaFit || 'Unknown',
@@ -70,17 +89,19 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
             lastContactDate: 'Never',
             notes: [{
                 id: crypto.randomUUID(),
-                content: `AI Scout: ${business.legalName || business.company}
+                content: `Lead Scout: ${business.legalName || business.company}
+• Address: ${business.address}, ${business.city}, ${business.state}
 • Industry: ${business.industry}
-• Est. Revenue: ${business.revenueRange || 'Unknown'}
-• Employees: ${business.employeeRange || 'Unknown'}
-• Years in Business: ${business.yearsInBusiness || 'Unknown'}
+• Est. Revenue: ${business.estimatedRevenue || 'Unknown'}
+• Est. Employees: ${business.estimatedEmployees || 'Unknown'}
 • SBA Fit: ${business.sbaFit} - ${business.sbaFitReason}
-• Contact: ${business.firstName} ${business.lastName}, ${business.role}
-• Source: AI Search (${business.confidence} confidence)`,
+• Lead Score: ${business.leadScore}/100
+• Sources: ${business.sources.join(', ') || 'Demo'}
+• Confidence: ${business.confidence}`,
                 timestamp: new Date().toISOString(),
                 author: 'System',
-                type: 'SystemEvent'
+                type: 'SystemEvent',
+                context: 'System'
             }]
         };
         onAddLead(newLead);
@@ -114,6 +135,21 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
             </div>
 
             <div className="search-section">
+                {/* Source Status Banner */}
+                {availableSources.length === 0 && (
+                    <div style={{
+                        padding: '0.75rem 1rem',
+                        background: '#fefce8',
+                        border: '1px solid #fde047',
+                        borderRadius: '6px',
+                        color: '#854d0e',
+                        marginBottom: '1rem',
+                        fontSize: '0.85rem'
+                    }}>
+                        <strong>Demo Mode</strong> — No API keys configured. Add VITE_GOOGLE_PLACES_API_KEY for real results.
+                    </div>
+                )}
+
                 <div className="search-row">
                     <input
                         type="text"
@@ -131,6 +167,17 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                         {locations.map(loc => (
                             <option key={loc} value={loc}>{loc}</option>
                         ))}
+                    </select>
+                    <select
+                        value={depth}
+                        onChange={(e) => setDepth(e.target.value as SearchDepth)}
+                        className="depth-select"
+                        title="Search Depth"
+                        style={{ minWidth: '100px' }}
+                    >
+                        <option value="quick">Quick</option>
+                        <option value="standard">Standard</option>
+                        <option value="deep">Deep</option>
                     </select>
                     <button
                         className="btn-primary search-btn"
@@ -203,7 +250,14 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                             </div>
                         )}
                         <div className="results-header">
-                            <span>Found {results.length} {isDemoMode ? 'sample' : 'potential'} leads</span>
+                            <span>
+                                Found {results.length} {isDemoMode ? 'sample' : ''} leads
+                                {!isDemoMode && searchTime > 0 && (
+                                    <span style={{ color: '#94a3b8', marginLeft: '0.5rem', fontWeight: 400 }}>
+                                        ({(searchTime / 1000).toFixed(1)}s via {usedSources.join(' + ') || 'demo'})
+                                    </span>
+                                )}
+                            </span>
                             <span className="confidence-legend">
                                 <span style={{ color: '#22c55e' }}>● High</span>
                                 <span style={{ color: '#f59e0b' }}>● Medium</span>
@@ -236,25 +290,27 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                                                 <p className="legal-name">Legal: {business.legalName}</p>
                                             )}
                                             <p className="contact-name">
-                                                {business.firstName} {business.lastName}
-                                                {business.role && <span className="role"> · {business.role}</span>}
+                                                {business.contactName || 'Contact not found'}
+                                                {business.contactRole && <span className="role"> · {business.contactRole}</span>}
                                             </p>
                                             <p className="contact-details">
-                                                {business.email}
-                                                {business.phone && <span> · {business.phone}</span>}
+                                                {business.address}
                                             </p>
-                                            <p className="location">{business.city}, {business.stateOfInc}</p>
+                                            <p className="location">{business.city}, {business.state}</p>
 
                                             <div className="quick-stats">
-                                                {business.revenueRange && (
-                                                    <span className="stat">{business.revenueRange}</span>
+                                                {business.estimatedRevenue && (
+                                                    <span className="stat">{business.estimatedRevenue}</span>
                                                 )}
-                                                {business.employeeRange && (
-                                                    <span className="stat">{business.employeeRange} emp</span>
+                                                {business.estimatedEmployees && (
+                                                    <span className="stat">{business.estimatedEmployees} emp</span>
                                                 )}
-                                                {business.yearsInBusiness && (
-                                                    <span className="stat">{business.yearsInBusiness}+ yrs</span>
-                                                )}
+                                                <span className="stat" style={{
+                                                    background: business.leadScore >= 70 ? '#dcfce7' : business.leadScore >= 40 ? '#fefce8' : '#fee2e2',
+                                                    color: business.leadScore >= 70 ? '#166534' : business.leadScore >= 40 ? '#854d0e' : '#991b1b'
+                                                }}>
+                                                    Score: {business.leadScore}
+                                                </span>
                                             </div>
                                         </div>
                                         <div className="result-actions">
@@ -281,30 +337,30 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                                                     <span className="value">{business.industry}</span>
                                                 </div>
                                                 <div className="detail-item">
-                                                    <span className="label">NAICS Code</span>
-                                                    <span className="value">{business.naicsCode || 'Unknown'}</span>
+                                                    <span className="label">Phone</span>
+                                                    <span className="value">{business.phone || 'Unknown'}</span>
                                                 </div>
                                                 <div className="detail-item">
                                                     <span className="label">Website</span>
                                                     <span className="value">
                                                         {business.website ? (
                                                             <a href={business.website} target="_blank" rel="noopener noreferrer">
-                                                                {business.website.replace('https://', '')}
+                                                                {business.website.replace('https://', '').replace('http://', '')}
                                                             </a>
                                                         ) : 'Unknown'}
                                                     </span>
                                                 </div>
                                                 <div className="detail-item">
                                                     <span className="label">Est. Revenue</span>
-                                                    <span className="value">{business.revenueRange || 'Unknown'}</span>
+                                                    <span className="value">{business.estimatedRevenue || 'Unknown'}</span>
                                                 </div>
                                                 <div className="detail-item">
-                                                    <span className="label">Employees</span>
-                                                    <span className="value">{business.employeeRange || 'Unknown'}</span>
+                                                    <span className="label">Est. Employees</span>
+                                                    <span className="value">{business.estimatedEmployees || 'Unknown'}</span>
                                                 </div>
                                                 <div className="detail-item">
-                                                    <span className="label">Years in Business</span>
-                                                    <span className="value">{business.yearsInBusiness || 'Unknown'}</span>
+                                                    <span className="label">Sources</span>
+                                                    <span className="value">{business.sources.join(', ') || 'Demo'}</span>
                                                 </div>
                                             </div>
                                             <div className="sba-analysis">
@@ -316,7 +372,7 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                 >
-                                                    🏛️ Verify on CA Secretary of State
+                                                    Verify on CA Secretary of State
                                                 </a>
                                             </div>
                                         </div>
@@ -329,17 +385,11 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
 
                 {!searched && (
                     <div className="empty-state">
-                        <h3>🎯 Find Your Next Lead</h3>
+                        <h3>Find Your Next Lead</h3>
                         <p>Search for SBA-eligible businesses in California, Nevada, or Arizona.</p>
-                        <div className="example-searches">
-                            <p><strong>Try searching for:</strong></p>
-                            <ul>
-                                <li>🏭 Manufacturing companies (great for 504 loans)</li>
-                                <li>🏥 Medical and dental practices</li>
-                                <li>🏨 Hotels and motels</li>
-                                <li>🔧 Auto repair and service businesses</li>
-                            </ul>
-                        </div>
+                        <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.5rem' }}>
+                            Depth: Quick (Google only) | Standard (Google + Yelp + AI) | Deep (All sources)
+                        </p>
                     </div>
                 )}
             </div>
