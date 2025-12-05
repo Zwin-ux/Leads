@@ -211,20 +211,102 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
         }
     };
 
+    // Calculate stale info
+    const getStaleInfo = () => {
+        const lastTouched = lead.lastContactDate;
+        if (!lastTouched || lastTouched === 'Never') {
+            return { days: null, color: '#ef4444', label: 'Never contacted', pulse: true };
+        }
+
+        const date = new Date(lastTouched);
+        if (isNaN(date.getTime())) {
+            return { days: null, color: '#94a3b8', label: lastTouched, pulse: false };
+        }
+
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays <= 7) {
+            return { days: diffDays, color: '#22c55e', label: diffDays === 0 ? 'Today' : `${diffDays}d ago`, pulse: false };
+        } else if (diffDays <= 14) {
+            return { days: diffDays, color: '#f59e0b', label: `${diffDays}d ago`, pulse: false };
+        } else if (diffDays <= 30) {
+            return { days: diffDays, color: '#f97316', label: `${diffDays}d ago`, pulse: true };
+        } else {
+            return { days: diffDays, color: '#ef4444', label: `${diffDays}d ago`, pulse: true };
+        }
+    };
+
+    const staleInfo = getStaleInfo();
+
+    // Get stage color
+    const getStageColor = (stage: string) => {
+        switch (stage) {
+            case 'New': return { bg: '#dbeafe', color: '#1e40af' };
+            case 'Contacted': return { bg: '#fef3c7', color: '#92400e' };
+            case 'Qualified': return { bg: '#dcfce7', color: '#166534' };
+            case 'Proposal': return { bg: '#e0e7ff', color: '#3730a3' };
+            case 'Closed': return { bg: '#d1fae5', color: '#065f46' };
+            default: return { bg: '#f1f5f9', color: '#475569' };
+        }
+    };
+
+    const stageStyle = getStageColor(lead.stage);
+
     return (
         <div className="modal-overlay">
             <div className="modal-content large">
-                <div className="modal-header">
-                    <div className="header-left">
-                        <h2>{lead.company}</h2>
-                        <span className="badge">{lead.stage}</span>
-                        {lead.owner && <span className="owner-badge">👤 {lead.owner}</span>}
+                {/* === ENHANCED HEADER === */}
+                <div className="modal-header enhanced">
+                    <div className="header-top-row">
+                        <div className="company-info">
+                            <h2>{lead.company || lead.businessName || 'Unknown Company'}</h2>
+                            {lead.businessName && lead.businessName !== lead.company && (
+                                <span className="legal-name">Legal: {lead.businessName}</span>
+                            )}
+                        </div>
+                        <div className="header-actions">
+                            <button className="btn-secondary" onClick={() => setShowTransfer(true)}>➡️ Transfer</button>
+                            <button className="btn-secondary" onClick={handleSendNow}>📤 Request Docs</button>
+                            {onDelete && <button className="btn-icon delete" onClick={handleDeleteLead} title="Delete Lead">🗑️</button>}
+                            <button className="close-btn" onClick={onClose}>&times;</button>
+                        </div>
                     </div>
-                    <div className="header-actions">
-                        <button className="btn-secondary" onClick={() => setShowTransfer(true)}>➡️ Transfer</button>
-                        <button className="btn-secondary" onClick={handleSendNow}>📤 Request Docs (SendNow)</button>
-                        {onDelete && <button className="btn-icon delete" onClick={handleDeleteLead} title="Delete Lead">🗑️</button>}
-                        <button className="close-btn" onClick={onClose}>&times;</button>
+
+                    {/* Status Bar - Always Visible */}
+                    <div className="header-status-bar">
+                        <div className="status-item">
+                            <span className="status-label">BDO</span>
+                            <span className="status-value owner">{lead.owner || 'Unassigned'}</span>
+                        </div>
+                        <div className="status-divider" />
+                        <div className="status-item">
+                            <span className="status-label">Stage</span>
+                            <span className="status-value stage" style={{ background: stageStyle.bg, color: stageStyle.color }}>
+                                {lead.stage}
+                            </span>
+                        </div>
+                        <div className="status-divider" />
+                        <div className="status-item">
+                            <span className="status-label">Deal Stage</span>
+                            <span className="status-value">{lead.dealStage || 'Prospecting'}</span>
+                        </div>
+                        <div className="status-divider" />
+                        <div className="status-item">
+                            <span className="status-label">Program</span>
+                            <span className="status-value program">{lead.loanProgram || 'Unknown'}</span>
+                        </div>
+                        <div className="status-divider" />
+                        <div className="status-item">
+                            <span className="status-label">Last Touch</span>
+                            <span
+                                className={`status-value stale ${staleInfo.pulse ? 'pulse' : ''}`}
+                                style={{ color: staleInfo.color }}
+                            >
+                                {staleInfo.label}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -748,6 +830,82 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 .factor-col h5 { margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #475569; }
                 .factor-col ul { margin: 0; padding-left: 1.25rem; }
                 .factor-col li { font-size: 0.875rem; color: #334155; margin-bottom: 0.25rem; }
+
+                /* === ENHANCED HEADER STYLES === */
+                .modal-header.enhanced {
+                    padding: 1rem 1.5rem;
+                    border-bottom: 1px solid #e2e8f0;
+                    background: linear-gradient(to bottom, #f8fafc, #ffffff);
+                }
+                .header-top-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 1rem;
+                }
+                .company-info h2 {
+                    margin: 0 0 0.25rem 0;
+                    font-size: 1.5rem;
+                    color: #1e293b;
+                }
+                .company-info .legal-name {
+                    font-size: 0.85rem;
+                    color: #64748b;
+                    font-style: italic;
+                }
+                .header-status-bar {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    padding: 0.75rem 1rem;
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    flex-wrap: wrap;
+                }
+                .status-item {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.25rem;
+                }
+                .status-label {
+                    font-size: 0.7rem;
+                    text-transform: uppercase;
+                    color: #94a3b8;
+                    letter-spacing: 0.5px;
+                    font-weight: 500;
+                }
+                .status-value {
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    color: #334155;
+                }
+                .status-value.owner {
+                    color: #0284c7;
+                }
+                .status-value.stage {
+                    padding: 0.2rem 0.5rem;
+                    border-radius: 4px;
+                    font-size: 0.8rem;
+                }
+                .status-value.program {
+                    color: #7c3aed;
+                }
+                .status-value.stale {
+                    font-weight: 700;
+                }
+                .status-value.stale.pulse {
+                    animation: stalePulse 2s infinite;
+                }
+                @keyframes stalePulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                }
+                .status-divider {
+                    width: 1px;
+                    height: 30px;
+                    background: #e2e8f0;
+                }
             `}</style>
             </div>
         </div>

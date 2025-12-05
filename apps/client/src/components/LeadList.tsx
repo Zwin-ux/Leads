@@ -200,6 +200,18 @@ const LeadList: React.FC = () => {
         setEmailTemplateType('intro');
     };
 
+    // Calculate stale color for lead cards
+    const getStaleColor = (lastTouched?: string) => {
+        if (!lastTouched || lastTouched === 'Never') return '#ef4444';
+        const date = new Date(lastTouched);
+        if (isNaN(date.getTime())) return '#94a3b8';
+        const diffMs = Date.now() - date.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays <= 7) return '#22c55e';
+        if (diffDays <= 14) return '#f59e0b';
+        if (diffDays <= 30) return '#f97316';
+        return '#ef4444';
+    };
 
     const filteredLeads = selectedOwner === 'All'
         ? leads
@@ -339,7 +351,26 @@ const LeadList: React.FC = () => {
                                 </div>
                             </div>
                             <div className="card-footer">
-                                <span className="last-contact">Last: {lead.lastContactDate}</span>
+                                <span
+                                    className="last-contact"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.35rem'
+                                    }}
+                                >
+                                    <span
+                                        className="stale-dot"
+                                        style={{
+                                            width: '8px',
+                                            height: '8px',
+                                            borderRadius: '50%',
+                                            background: getStaleColor(lead.lastContactDate),
+                                            flexShrink: 0
+                                        }}
+                                    />
+                                    Last: {lead.lastContactDate || 'Never'}
+                                </span>
                                 {lead.nextAction && <span className="next-action">👉 {lead.nextAction}</span>}
                             </div>
                             {lead.loanProgram && <div className="lead-program-tag">{lead.loanProgram}</div>}
