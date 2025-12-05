@@ -71,6 +71,7 @@ interface DocumentChecklistProps {
     lead: Lead;
     onUpdateDocument: (docId: string, updates: Partial<Document>) => void;
     onRequestDocs: (docTypes: DocumentType[]) => void;
+    onApplyTemplate?: (template: DocumentType[]) => void;
 }
 
 const SENDNOW_URL = 'https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/r1';
@@ -78,7 +79,8 @@ const SENDNOW_URL = 'https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/
 export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
     lead,
     onUpdateDocument,
-    onRequestDocs
+    onRequestDocs,
+    onApplyTemplate
 }) => {
     // Get checklist based on loan program
     const checklistTemplate = lead.loanProgram === '7a' ? DOC_CHECKLIST_7A : DOC_CHECKLIST_504;
@@ -166,6 +168,15 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                 >
                     Request Docs
                 </button>
+                {onApplyTemplate && (
+                    <button
+                        className="btn-secondary"
+                        onClick={() => onApplyTemplate(checklistTemplate)}
+                        style={{ marginLeft: '0.5rem' }}
+                    >
+                        Apply {lead.loanProgram || '504'} Template
+                    </button>
+                )}
             </div>
 
             {/* Document list */}

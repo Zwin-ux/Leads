@@ -12,6 +12,8 @@ import { LeadGenerator } from './LeadGenerator';
 import TransferLeadModal from './TransferLeadModal';
 import { BankerRolodex } from './BankerRolodex';
 import { ManagerDashboard } from './ManagerDashboard';
+import { ProcessorDashboard } from './ProcessorDashboard';
+import { UnderwriterDashboard } from './UnderwriterDashboard';
 
 const LeadList: React.FC = () => {
     const currentUser = authService.getCurrentUser();
@@ -21,9 +23,18 @@ const LeadList: React.FC = () => {
     const [showImport, setShowImport] = useState(false);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [leadToTransfer, setLeadToTransfer] = useState<Lead | null>(null);
-    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator' | 'bankers' | 'dashboard'>('list');
-    // Default to current user's leads, not "All"
+    // Determine initial view based on role
+    const getInitialView = () => {
+        if (!currentUser) return 'list';
+        if (currentUser.role === 'processor') return 'processor_dashboard';
+        if (currentUser.role === 'underwriter') return 'underwriter_dashboard';
+        if (currentUser.role === 'manager' || currentUser.role === 'admin') return 'dashboard';
+        return 'list';
+    };
+
+    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator' | 'bankers' | 'dashboard' | 'processor_dashboard' | 'underwriter_dashboard'>(getInitialView());
     const [selectedOwner, setSelectedOwner] = useState<string>(currentUser?.name || 'All');
+    const [filterStale, setFilterStale] = useState(false);
 
     // Email preview state
     const [emailPreviewLead, setEmailPreviewLead] = useState<Lead | null>(null);
@@ -152,6 +163,45 @@ const LeadList: React.FC = () => {
         }
     };
 
+    const filteredLeads = useMemo(() => {
+        let result = leads;
+
+        // Filter by owner
+        if (selectedOwner !== 'All') {
+            result = result.filter(l => l.owner === selectedOwner);
+        }
+
+        // Filter by stale status
+        if (filterStale) {
+            const now = new Date();
+            result = result.filter(l => {
+                if (!l.lastContactDate || l.lastContactDate === 'Never') return true;
+                const last = new Date(l.lastContactDate);
+                const daysSince = Math.floor((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
+                return daysSince > 7;
+            });
+        }
+
+        return result;
+    }, [leads, selectedOwner, filterStale]);
+
+    const stats = useMemo(() => {
+        const now = new Date();
+        return {
+            total: filteredLeads.length,
+            newLeads: filteredLeads.filter(l => (l as any).stage === 'New').length,
+            inProgress: filteredLeads.filter(l => (l as any).stage === 'In Process' || (l as any).stage === 'Qualified' || (l as any).stage === 'Proposal' || (l as any).stage === 'Negotiation').length,
+            closing: filteredLeads.filter(l => l.dealStage === 'Closing' || l.dealStage === 'Approved').length,
+            funded: filteredLeads.filter(l => l.dealStage === 'Funded').length,
+            stale: filteredLeads.filter(l => {
+                if (!l.lastContactDate || l.lastContactDate === 'Never') return true;
+                const last = new Date(l.lastContactDate);
+                const daysSince = Math.floor((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
+                return daysSince > 7;
+            }).length
+        };
+    }, [filteredLeads]);
+
     const handleDeleteLead = async (leadId: string) => {
         if (!window.confirm("Are you sure you want to delete this lead? This action cannot be undone.")) return;
 
@@ -217,49 +267,31 @@ const LeadList: React.FC = () => {
         return '#ef4444';
     };
 
-    const filteredLeads = selectedOwner === 'All'
-        ? leads
-        : leads.filter(l => l.owner === selectedOwner);
-
-    // Dashboard stats for the current user's leads
-    const stats = useMemo(() => {
-        const userLeads = filteredLeads;
-        const newLeads = userLeads.filter(l => l.stage === 'New').length;
-        const inProgress = userLeads.filter(l => ['Contacted', 'Qualified', 'Proposal'].includes(l.stage) ||
-            ['Processing', 'Underwriting', 'Approved'].includes(l.dealStage || '')).length;
-        const closing = userLeads.filter(l => l.dealStage === 'Closing').length;
-        const funded = userLeads.filter(l => l.dealStage === 'Funded').length;
-        const totalValue = userLeads.reduce((sum, l) => sum + (l.loanAmount || 0), 0);
-
-        // Stale leads (not touched in 7+ days)
-        const stale = userLeads.filter(l => {
-            if (!l.lastContactDate || l.lastContactDate === 'Never') return true;
-            const d = new Date(l.lastContactDate);
-            if (isNaN(d.getTime())) return true;
-            return (Date.now() - d.getTime()) > 7 * 24 * 60 * 60 * 1000;
-        }).length;
-
-        return { total: userLeads.length, newLeads, inProgress, closing, funded, totalValue, stale };
-    }, [filteredLeads]);
-
     if (viewMode === 'generator') {
-        return <LeadGenerator onAddLead={handleAddFromGenerator} onCancel={() => setViewMode('list')} />;
+        return (
+            <div className="lead-list" style={{ padding: '1rem' }}>
+                <LeadGenerator
+                    onAddLead={handleAddFromGenerator}
+                    onCancel={() => setViewMode('list')}
+                />
+            </div>
+        );
     }
 
     if (viewMode === 'bankers') {
         return (
             <div className="lead-list" style={{ padding: '1rem' }}>
-                <div className="header" style={{ marginBottom: '1rem' }}>
-                    <div className="header-title">
-                        <h1>Banker Rolodex</h1>
-                    </div>
-                    <button className="btn-secondary" onClick={() => setViewMode('list')}>
-                        ← Back to Leads
-                    </button>
-                </div>
-                <BankerRolodex />
+                <BankerRolodex onBack={() => setViewMode('list')} />
             </div>
         );
+    }
+
+    if (viewMode === 'processor_dashboard') {
+        return <ProcessorDashboard leads={leads} onUpdateLead={handleUpdateLead} />;
+    }
+
+    if (viewMode === 'underwriter_dashboard') {
+        return <UnderwriterDashboard leads={leads} onUpdateLead={handleUpdateLead} />;
     }
 
     if (viewMode === 'dashboard') {
@@ -281,7 +313,7 @@ const LeadList: React.FC = () => {
             <ManagerDashboard
                 leads={leads}
                 onReassignLead={handleReassignLead}
-                onSelectLead={(lead) => setSelectedLead(lead)}
+                onSelectLead={(lead: Lead) => setSelectedLead(lead)}
                 onBack={() => setViewMode('list')}
             />
         );
@@ -388,9 +420,24 @@ const LeadList: React.FC = () => {
                             color: viewMode === 'pipeline' ? 'white' : '#64748b',
                             fontWeight: 500,
                             cursor: 'pointer',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            marginLeft: '0.5rem'
                         }}
                     >📊 Pipeline</button>
+                    <button
+                        onClick={() => setFilterStale(!filterStale)}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: filterStale ? '#ef4444' : '#f1f5f9',
+                            color: filterStale ? 'white' : '#64748b',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            marginLeft: '0.5rem'
+                        }}
+                    >⚠️ Stale Only</button>
                     <div style={{ width: '1px', background: '#e2e8f0', margin: '0 0.5rem' }} />
                     <button
                         onClick={() => setViewMode('generator')}
@@ -461,206 +508,213 @@ const LeadList: React.FC = () => {
             {showAdd && <AddLeadForm onAdd={handleAdd} onCancel={() => setShowAdd(false)} />}
             {showImport && <DropZone onImport={handleImport} onCancel={() => setShowImport(false)} />}
 
-            {leadToTransfer && (
-                <TransferLeadModal
-                    lead={leadToTransfer}
-                    onClose={() => setLeadToTransfer(null)}
-                    onTransfer={handleTransfer}
-                />
-            )}
+            {
+                leadToTransfer && (
+                    <TransferLeadModal
+                        lead={leadToTransfer}
+                        onClose={() => setLeadToTransfer(null)}
+                        onTransfer={handleTransfer}
+                    />
+                )
+            }
 
-            {selectedLead && (
-                <LeadDetailModal
-                    lead={selectedLead}
-                    onClose={() => setSelectedLead(null)}
-                    onUpdate={handleUpdateLead}
-                    onDelete={handleDeleteLead}
-                />
-            )}
+            {
+                selectedLead && (
+                    <LeadDetailModal
+                        lead={selectedLead}
+                        onClose={() => setSelectedLead(null)}
+                        onUpdate={handleUpdateLead}
+                        onDelete={handleDeleteLead}
+                    />
+                )
+            }
 
-            {!loading && filteredLeads.length === 0 ? (
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '4rem 2rem',
-                    textAlign: 'center'
-                }}>
-                    <img src={logo} alt="AmPac" style={{ height: '80px', opacity: 0.15, marginBottom: '1.5rem', filter: 'grayscale(100%)' }} />
-                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '1.25rem' }}>No leads yet</h3>
-                    <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>Get started by finding new businesses or importing from Excel</p>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <button
-                            onClick={() => setViewMode('generator')}
-                            style={{
-                                padding: '0.75rem 1.5rem',
-                                borderRadius: '10px',
-                                border: 'none',
-                                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                                color: 'white',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
-                            }}
-                        >🔍 Find Leads</button>
-                        <button onClick={() => setShowImport(true)} className="btn-secondary">📥 Import Excel</button>
-                        <button onClick={() => setShowAdd(true)} className="btn-secondary">+ Add Manually</button>
-                    </div>
-                </div>
-            ) : viewMode === 'pipeline' ? (
-                <PipelineView leads={filteredLeads} onLeadClick={setSelectedLead} onLeadMove={handleLeadMove} />
-            ) : (
-                <div className="grid">
-                    {filteredLeads.map(lead => (
-                        <div key={lead.id} className="lead-card" onClick={() => setSelectedLead(lead)}>
-                            <div className="card-header">
-                                <h3>{lead.firstName} {lead.lastName}</h3>
-                                <span className={`status-badge ${lead.stage.toLowerCase().replace(/\s/g, '-')}`}>
-                                    {lead.stage}
-                                </span>
-                            </div>
-                            <p className="company">{lead.company}</p>
-                            <div className="card-meta-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                                {lead.owner && <div className="owner-tag" style={{ fontSize: '0.75rem', color: '#64748b' }}>👤 {lead.owner}</div>}
-                                <div style={{ display: 'flex', gap: '4px' }}>
-                                    <button
-                                        className="icon-btn"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEmailPreview(lead);
-                                        }}
-                                        title="Draft Email"
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
-                                    >
-                                        📧
-                                    </button>
-                                    <button
-                                        className="icon-btn"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setLeadToTransfer(lead);
-                                        }}
-                                        title="Transfer Lead"
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
-                                    >
-                                        ➡️
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="card-footer">
-                                <span
-                                    className="last-contact"
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.35rem'
-                                    }}
-                                >
-                                    <span
-                                        className="stale-dot"
-                                        style={{
-                                            width: '8px',
-                                            height: '8px',
-                                            borderRadius: '50%',
-                                            background: getStaleColor(lead.lastContactDate),
-                                            flexShrink: 0
-                                        }}
-                                    />
-                                    Last: {lead.lastContactDate || 'Never'}
-                                </span>
-                                {lead.nextAction && <span className="next-action">{lead.nextAction}</span>}
-                            </div>
-                            {lead.loanProgram && <div className="lead-program-tag">{lead.loanProgram}</div>}
+            {
+                !loading && filteredLeads.length === 0 ? (
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4rem 2rem',
+                        textAlign: 'center'
+                    }}>
+                        <img src={logo} alt="AmPac" style={{ height: '80px', opacity: 0.15, marginBottom: '1.5rem', filter: 'grayscale(100%)' }} />
+                        <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '1.25rem' }}>No leads yet</h3>
+                        <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>Get started by finding new businesses or importing from Excel</p>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button
+                                onClick={() => setViewMode('generator')}
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
+                                }}
+                            >🔍 Find Leads</button>
+                            <button onClick={() => setShowImport(true)} className="btn-secondary">📥 Import Excel</button>
+                            <button onClick={() => setShowAdd(true)} className="btn-secondary">+ Add Manually</button>
                         </div>
-                    ))}
-                </div>
-            )}
+                    </div>
+                ) : viewMode === 'pipeline' ? (
+                    <PipelineView leads={filteredLeads} onLeadClick={setSelectedLead} onLeadMove={handleLeadMove} />
+                ) : (
+                    <div className="grid">
+                        {filteredLeads.map(lead => (
+                            <div key={lead.id} className="lead-card" onClick={() => setSelectedLead(lead)}>
+                                <div className="card-header">
+                                    <h3>{lead.firstName} {lead.lastName}</h3>
+                                    <span className={`status-badge ${lead.stage.toLowerCase().replace(/\s/g, '-')}`}>
+                                        {lead.stage}
+                                    </span>
+                                </div>
+                                <p className="company">{lead.company}</p>
+                                <div className="card-meta-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                                    {lead.owner && <div className="owner-tag" style={{ fontSize: '0.75rem', color: '#64748b' }}>👤 {lead.owner}</div>}
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        <button
+                                            className="icon-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEmailPreview(lead);
+                                            }}
+                                            title="Draft Email"
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
+                                        >
+                                            📧
+                                        </button>
+                                        <button
+                                            className="icon-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setLeadToTransfer(lead);
+                                            }}
+                                            title="Transfer Lead"
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
+                                        >
+                                            ➡️
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="card-footer">
+                                    <span
+                                        className="last-contact"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.35rem'
+                                        }}
+                                    >
+                                        <span
+                                            className="stale-dot"
+                                            style={{
+                                                width: '8px',
+                                                height: '8px',
+                                                borderRadius: '50%',
+                                                background: getStaleColor(lead.lastContactDate),
+                                                flexShrink: 0
+                                            }}
+                                        />
+                                        Last: {lead.lastContactDate || 'Never'}
+                                    </span>
+                                    {lead.nextAction && <span className="next-action">{lead.nextAction}</span>}
+                                </div>
+                                {lead.loanProgram && <div className="lead-program-tag">{lead.loanProgram}</div>}
+                            </div>
+                        ))}
+                    </div>
+                )
+            }
 
             {/* Email Preview Modal */}
-            {emailPreviewLead && (
-                <div className="modal-backdrop" onClick={() => setEmailPreviewLead(null)}>
-                    <div className="modal email-preview-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '650px' }}>
-                        <div className="modal-header">
-                            <h2>Email Composer</h2>
-                            <button className="close-btn" onClick={() => setEmailPreviewLead(null)}>×</button>
-                        </div>
-                        <div className="modal-body" style={{ padding: '1.5rem' }}>
-                            {/* Template Selector */}
-                            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                <label style={{ fontWeight: 500, color: '#475569' }}>Template:</label>
-                                <select
-                                    value={emailTemplateType}
-                                    onChange={(e) => handleRegenerateEmail(e.target.value as EmailTemplateType)}
-                                    disabled={generatingEmail}
-                                    style={{
-                                        padding: '0.5rem 1rem',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: '6px',
-                                        fontSize: '0.9rem',
-                                        flex: 1
-                                    }}
-                                >
-                                    <option value="intro">Intro</option>
-                                    <option value="followup">Follow-Up</option>
-                                    <option value="referral">Referral Partner</option>
-                                    <option value="banker">Banker Outreach</option>
-                                    <option value="documents">Document Request</option>
-                                    <option value="update">Deal Update</option>
-                                    <option value="winback">Win Back</option>
-                                </select>
+            {
+                emailPreviewLead && (
+                    <div className="modal-backdrop" onClick={() => setEmailPreviewLead(null)}>
+                        <div className="modal email-preview-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '650px' }}>
+                            <div className="modal-header">
+                                <h2>Email Composer</h2>
+                                <button className="close-btn" onClick={() => setEmailPreviewLead(null)}>×</button>
                             </div>
-
-                            <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                <strong>To:</strong>
-                                <span style={{ color: '#475569' }}>{emailPreviewLead.email}</span>
-                            </div>
-                            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                <strong>Subject:</strong>
-                                <span style={{ color: '#475569' }}>AmPac Business Capital - {emailPreviewLead.company}</span>
-                            </div>
-                            {generatingEmail ? (
-                                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '8px' }}>
-                                    <div style={{ marginBottom: '0.5rem' }}>Generating email...</div>
-                                    <div style={{ fontSize: '0.85rem' }}>Personalizing for {emailPreviewLead.firstName}</div>
+                            <div className="modal-body" style={{ padding: '1.5rem' }}>
+                                {/* Template Selector */}
+                                <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <label style={{ fontWeight: 500, color: '#475569' }}>Template:</label>
+                                    <select
+                                        value={emailTemplateType}
+                                        onChange={(e) => handleRegenerateEmail(e.target.value as EmailTemplateType)}
+                                        disabled={generatingEmail}
+                                        style={{
+                                            padding: '0.5rem 1rem',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '6px',
+                                            fontSize: '0.9rem',
+                                            flex: 1
+                                        }}
+                                    >
+                                        <option value="intro">Intro</option>
+                                        <option value="followup">Follow-Up</option>
+                                        <option value="referral">Referral Partner</option>
+                                        <option value="banker">Banker Outreach</option>
+                                        <option value="documents">Document Request</option>
+                                        <option value="update">Deal Update</option>
+                                        <option value="winback">Win Back</option>
+                                    </select>
                                 </div>
-                            ) : (
-                                <textarea
-                                    value={emailContent}
-                                    onChange={(e) => setEmailContent(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        minHeight: '320px',
-                                        padding: '1rem',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: '8px',
-                                        fontFamily: 'inherit',
-                                        fontSize: '0.95rem',
-                                        lineHeight: '1.6',
-                                        resize: 'vertical'
-                                    }}
-                                />
-                            )}
-                        </div>
-                        <div className="modal-footer" style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between', padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0' }}>
-                            <button
-                                className="btn-secondary"
-                                onClick={() => handleRegenerateEmail(emailTemplateType)}
-                                disabled={generatingEmail}
-                                style={{ opacity: generatingEmail ? 0.5 : 1 }}
-                            >
-                                Regenerate
-                            </button>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button className="btn-secondary" onClick={() => setEmailPreviewLead(null)}>Cancel</button>
-                                <button className="btn-primary" onClick={handleSendToOutlook} disabled={generatingEmail}>
-                                    Open in Outlook
+
+                                <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <strong>To:</strong>
+                                    <span style={{ color: '#475569' }}>{emailPreviewLead.email}</span>
+                                </div>
+                                <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <strong>Subject:</strong>
+                                    <span style={{ color: '#475569' }}>AmPac Business Capital - {emailPreviewLead.company}</span>
+                                </div>
+                                {generatingEmail ? (
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '8px' }}>
+                                        <div style={{ marginBottom: '0.5rem' }}>Generating email...</div>
+                                        <div style={{ fontSize: '0.85rem' }}>Personalizing for {emailPreviewLead.firstName}</div>
+                                    </div>
+                                ) : (
+                                    <textarea
+                                        value={emailContent}
+                                        onChange={(e) => setEmailContent(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            minHeight: '320px',
+                                            padding: '1rem',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '8px',
+                                            fontFamily: 'inherit',
+                                            fontSize: '0.95rem',
+                                            lineHeight: '1.6',
+                                            resize: 'vertical'
+                                        }}
+                                    />
+                                )}
+                            </div>
+                            <div className="modal-footer" style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between', padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0' }}>
+                                <button
+                                    className="btn-secondary"
+                                    onClick={() => handleRegenerateEmail(emailTemplateType)}
+                                    disabled={generatingEmail}
+                                    style={{ opacity: generatingEmail ? 0.5 : 1 }}
+                                >
+                                    Regenerate
                                 </button>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <button className="btn-secondary" onClick={() => setEmailPreviewLead(null)}>Cancel</button>
+                                    <button className="btn-primary" onClick={handleSendToOutlook} disabled={generatingEmail}>
+                                        Open in Outlook
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )
+                )
             }
         </div >
     );

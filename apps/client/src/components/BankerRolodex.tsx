@@ -20,9 +20,10 @@ const STORAGE_KEY = 'leads_bankers_v1';
 interface BankerRolodexProps {
     onSelectBanker?: (banker: Banker) => void;
     selectionMode?: boolean;
+    onBack?: () => void;
 }
 
-export const BankerRolodex: React.FC<BankerRolodexProps> = ({ onSelectBanker, selectionMode = false }) => {
+export const BankerRolodex: React.FC<BankerRolodexProps> = ({ onSelectBanker, selectionMode = false, onBack }) => {
     const [bankers, setBankers] = useState<Banker[]>([]);
     const [search, setSearch] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
@@ -90,6 +91,11 @@ export const BankerRolodex: React.FC<BankerRolodexProps> = ({ onSelectBanker, se
             {/* Header */}
             <div className="rolodex-header">
                 <div className="header-left">
+                    {onBack && (
+                        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', marginRight: '0.5rem' }}>
+                            ←
+                        </button>
+                    )}
                     <h2>Banker Rolodex</h2>
                     <span className="count">{filteredBankers.length} bankers</span>
                 </div>

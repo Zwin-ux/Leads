@@ -5,6 +5,7 @@ import TransferLeadModal from './TransferLeadModal';
 import { DocumentChecklist } from './DocumentChecklist';
 import { BankPartnerPanel } from './BankPartnerPanel';
 import { ClosingChecklist } from './ClosingChecklist';
+import { SBAEligibilityScanner } from './SBAEligibilityScanner';
 
 interface LeadDetailModalProps {
     lead: Lead;
@@ -14,7 +15,7 @@ interface LeadDetailModalProps {
 }
 
 const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate, onDelete }) => {
-    const [activeTab, setActiveTab] = useState<'snapshot' | 'documents' | 'notes' | 'closing' | 'partners' | 'contacts' | 'research'>('snapshot');
+    const [activeTab, setActiveTab] = useState<'snapshot' | 'documents' | 'qualification' | 'notes' | 'closing' | 'partners' | 'contacts' | 'research'>('snapshot');
     const [noteContent, setNoteContent] = useState('');
     const [noteContext, setNoteContext] = useState<'Call' | 'Email' | 'Meeting' | 'Manual'>('Manual');
     const [aiEmail, setAiEmail] = useState('');
@@ -320,6 +321,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 <div className="modal-tabs">
                     <button className={activeTab === 'snapshot' ? 'active' : ''} onClick={() => setActiveTab('snapshot')}>Deal Info</button>
                     <button className={activeTab === 'documents' ? 'active' : ''} onClick={() => setActiveTab('documents')}>Documents</button>
+                    <button className={activeTab === 'qualification' ? 'active' : ''} onClick={() => setActiveTab('qualification')}>Qualification</button>
                     <button className={activeTab === 'notes' ? 'active' : ''} onClick={() => setActiveTab('notes')}>Notes</button>
                     <button className={activeTab === 'closing' ? 'active' : ''} onClick={() => setActiveTab('closing')}>Closing</button>
                     <button className={activeTab === 'partners' ? 'active' : ''} onClick={() => setActiveTab('partners')}>Bank Partners</button>
@@ -522,6 +524,42 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                 onRequestDocs={(_docTypes) => {
                                     const sendNowUrl = 'https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/r1';
                                     window.open(sendNowUrl, '_blank');
+                                }}
+                                onApplyTemplate={(template) => {
+                                    // Merge template with existing docs
+                                    const currentDocs = lead.documents || [];
+                                    const newDocs = [...currentDocs];
+
+                                    template.forEach(type => {
+                                        if (!newDocs.find(d => d.type === type)) {
+                                            newDocs.push({
+                                                id: `doc-${type}-${Date.now()}`,
+                                                type,
+                                                label: type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Simple label fallback
+                                                status: 'needed'
+                                            });
+                                        }
+                                    });
+                                    onUpdate({ ...lead, documents: newDocs });
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    {activeTab === 'qualification' && (
+                        <div className="qualification-view">
+                            <SBAEligibilityScanner
+                                lead={lead}
+                                onUpdateNote={(note) => {
+                                    const newNote = {
+                                        id: Date.now().toString(),
+                                        content: note,
+                                        timestamp: new Date().toISOString(),
+                                        author: 'System',
+                                        type: 'SystemEvent' as const,
+                                        context: 'System' as const
+                                    };
+                                    onUpdate({ ...lead, notes: [newNote, ...(lead.notes || [])] });
                                 }}
                             />
                         </div>

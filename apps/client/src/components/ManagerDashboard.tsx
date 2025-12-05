@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Lead } from '@leads/shared';
 import { TEAM_MEMBERS } from '../services/authService';
+import { ReferralStats } from './ReferralStats';
 
 interface ManagerDashboardProps {
     leads: Lead[];
@@ -163,6 +164,24 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                             <div className="empty-state">No stale leads! 🎉</div>
                         )}
                     </div>
+                </div>
+
+                {/* Referral Stats */}
+                <div className="panel referral-panel" style={{ gridColumn: '1 / -1' }}>
+                    <h3>Referral Intelligence</h3>
+                    <ReferralStats
+                        leads={leads}
+                        bankers={(() => {
+                            const stored = localStorage.getItem('leads_bankers_v1');
+                            if (stored) return JSON.parse(stored);
+                            return [
+                                { id: 'b1', name: 'John Mitchell', bank: 'Comerica', branch: 'Riverside', title: 'VP Commercial Banking', phone: '951-555-0101', email: 'jmitchell@comerica.com', trustScore: 5, totalFunded: 12500000, lastDealDate: '2024-10-15', notes: 'Great partner.' },
+                                { id: 'b2', name: 'Sarah Chen', bank: 'Pacific Premier', branch: 'Los Angeles', title: 'SVP', phone: '213-555-0202', email: 'schen@ppbi.com', trustScore: 5, totalFunded: 18200000, lastDealDate: '2024-11-01', notes: 'Top performer.' },
+                                { id: 'b3', name: 'Mike Thompson', bank: 'First Republic', branch: 'Newport Beach', title: 'Director', phone: '949-555-0303', email: 'mthompson@firstrepublic.com', trustScore: 4, totalFunded: 8500000, lastDealDate: '2024-09-20', notes: 'Good for larger deals.' },
+                                { id: 'b4', name: 'Lisa Wong', bank: 'US Bank', branch: 'San Diego', title: 'VP SBA Lending', phone: '619-555-0404', email: 'lwong@usbank.com', trustScore: 4, totalFunded: 6800000, lastDealDate: '2024-08-10', notes: 'SBA preferred lender.' },
+                            ];
+                        })()}
+                    />
                 </div>
             </div>
 
