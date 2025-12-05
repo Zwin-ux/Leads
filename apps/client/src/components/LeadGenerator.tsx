@@ -150,19 +150,40 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                     </div>
                 )}
 
-                <div className="search-row">
+                <div style={{
+                    display: 'flex',
+                    gap: '1rem',
+                    alignItems: 'stretch',
+                    marginBottom: '1rem'
+                }}>
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search for businesses (e.g. 'Machine Shops', 'Medical Clinics', 'Hotels')"
-                        className="search-input"
+                        placeholder="Search for businesses (e.g. 'Machine Shops', 'Medical Clinics')"
                         onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                        style={{
+                            flex: 1,
+                            padding: '0.875rem 1rem',
+                            border: '2px solid #e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '1rem',
+                            outline: 'none',
+                            transition: 'border-color 0.2s'
+                        }}
                     />
                     <select
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
-                        className="location-select"
+                        style={{
+                            padding: '0.875rem 1rem',
+                            border: '2px solid #e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '1rem',
+                            minWidth: '180px',
+                            background: 'white',
+                            cursor: 'pointer'
+                        }}
                     >
                         {locations.map(loc => (
                             <option key={loc} value={loc}>{loc}</option>
@@ -171,20 +192,41 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                     <select
                         value={depth}
                         onChange={(e) => setDepth(e.target.value as SearchDepth)}
-                        className="depth-select"
                         title="Search Depth"
-                        style={{ minWidth: '100px' }}
+                        style={{
+                            padding: '0.875rem 1rem',
+                            border: '2px solid #e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '1rem',
+                            minWidth: '120px',
+                            background: 'white',
+                            cursor: 'pointer'
+                        }}
                     >
                         <option value="quick">Quick</option>
                         <option value="standard">Standard</option>
                         <option value="deep">Deep</option>
                     </select>
                     <button
-                        className="btn-primary search-btn"
                         onClick={handleSearch}
                         disabled={loading || !searchQuery.trim()}
+                        style={{
+                            padding: '0.875rem 2rem',
+                            background: loading || !searchQuery.trim()
+                                ? '#94a3b8'
+                                : 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                            border: 'none',
+                            borderRadius: '12px',
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: '1rem',
+                            cursor: loading || !searchQuery.trim() ? 'not-allowed' : 'pointer',
+                            boxShadow: loading || !searchQuery.trim() ? 'none' : '0 4px 12px rgba(59,130,246,0.3)',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s'
+                        }}
                     >
-                        {loading ? 'Searching...' : 'Search'}
+                        {loading ? '⏳ Searching...' : '🔍 Search'}
                     </button>
                 </div>
 

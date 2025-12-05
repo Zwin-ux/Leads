@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Lead } from '@leads/shared';
 import { apiService } from '../services/apiService';
 import { openaiService, type EmailTemplateType } from '../services/openaiService';
-import { TEAM_MEMBERS } from '../services/authService';
+import { TEAM_MEMBERS, authService } from '../services/authService';
 import LeadDetailModal from './LeadDetailModal';
 import { PipelineView } from './PipelineView';
 import AddLeadForm from './AddLeadForm';
@@ -14,6 +14,7 @@ import { BankerRolodex } from './BankerRolodex';
 import { ManagerDashboard } from './ManagerDashboard';
 
 const LeadList: React.FC = () => {
+    const currentUser = authService.getCurrentUser();
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
@@ -21,7 +22,8 @@ const LeadList: React.FC = () => {
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [leadToTransfer, setLeadToTransfer] = useState<Lead | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator' | 'bankers' | 'dashboard'>('list');
-    const [selectedOwner, setSelectedOwner] = useState<string>('All');
+    // Default to current user's leads, not "All"
+    const [selectedOwner, setSelectedOwner] = useState<string>(currentUser?.name || 'All');
 
     // Email preview state
     const [emailPreviewLead, setEmailPreviewLead] = useState<Lead | null>(null);
@@ -219,6 +221,27 @@ const LeadList: React.FC = () => {
         ? leads
         : leads.filter(l => l.owner === selectedOwner);
 
+    // Dashboard stats for the current user's leads
+    const stats = useMemo(() => {
+        const userLeads = filteredLeads;
+        const newLeads = userLeads.filter(l => l.stage === 'New').length;
+        const inProgress = userLeads.filter(l => ['Contacted', 'Qualified', 'Proposal'].includes(l.stage) ||
+            ['Processing', 'Underwriting', 'Approved'].includes(l.dealStage || '')).length;
+        const closing = userLeads.filter(l => l.dealStage === 'Closing').length;
+        const funded = userLeads.filter(l => l.dealStage === 'Funded').length;
+        const totalValue = userLeads.reduce((sum, l) => sum + (l.loanAmount || 0), 0);
+
+        // Stale leads (not touched in 7+ days)
+        const stale = userLeads.filter(l => {
+            if (!l.lastContactDate || l.lastContactDate === 'Never') return true;
+            const d = new Date(l.lastContactDate);
+            if (isNaN(d.getTime())) return true;
+            return (Date.now() - d.getTime()) > 7 * 24 * 60 * 60 * 1000;
+        }).length;
+
+        return { total: userLeads.length, newLeads, inProgress, closing, funded, totalValue, stale };
+    }, [filteredLeads]);
+
     if (viewMode === 'generator') {
         return <LeadGenerator onAddLead={handleAddFromGenerator} onCancel={() => setViewMode('list')} />;
     }
@@ -265,76 +288,173 @@ const LeadList: React.FC = () => {
     }
 
     return (
-        <div className="lead-list">
-            <div className="header">
-                <div className="header-title">
-                    <h1>My Leads</h1>
-                    {loading && <span className="loading-badge">Syncing...</span>}
+        <div className="lead-list" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+            {/* Modern Dashboard Header */}
+            <div style={{
+                background: 'linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)',
+                padding: '1.5rem 2rem',
+                color: 'white'
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <div>
+                        <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 600 }}>
+                            {selectedOwner === 'All' ? '📊 All Pipeline' : `👤 ${selectedOwner.split(' ')[0]}'s Pipeline`}
+                        </h1>
+                        <p style={{ margin: '0.25rem 0 0 0', opacity: 0.7, fontSize: '0.9rem' }}>
+                            {loading ? 'Loading...' : `${stats.total} leads • ${stats.stale > 0 ? `${stats.stale} need attention` : 'All up to date'}`}
+                        </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <select
+                            value={selectedOwner}
+                            onChange={(e) => setSelectedOwner(e.target.value)}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                background: 'rgba(255,255,255,0.1)',
+                                color: 'white',
+                                fontSize: '0.9rem',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <option value="All" style={{ color: '#1e293b' }}>All Team Members</option>
+                            {currentUser && <option value={currentUser.name} style={{ color: '#1e293b' }}>My Leads</option>}
+                            {TEAM_MEMBERS.filter(m => m.name !== currentUser?.name).map(m => (
+                                <option key={m.email} value={m.name} style={{ color: '#1e293b' }}>{m.name}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
-                <div className="actions">
-                    <select
-                        value={selectedOwner}
-                        onChange={(e) => setSelectedOwner(e.target.value)}
-                        className="owner-filter"
+
+                {/* Stats Cards Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginTop: '1rem' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1rem', backdropFilter: 'blur(10px)' }}>
+                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', opacity: 0.7 }}>New</div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 700 }}>{stats.newLeads}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1rem', backdropFilter: 'blur(10px)' }}>
+                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', opacity: 0.7 }}>In Progress</div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 700 }}>{stats.inProgress}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1rem', backdropFilter: 'blur(10px)' }}>
+                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', opacity: 0.7 }}>Closing</div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 700 }}>{stats.closing}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1rem', backdropFilter: 'blur(10px)' }}>
+                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', opacity: 0.7 }}>Funded</div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 700 }}>{stats.funded}</div>
+                    </div>
+                    <div style={{ background: stats.stale > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)', borderRadius: '12px', padding: '1rem' }}>
+                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', opacity: 0.7 }}>Need Attention</div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 700, color: stats.stale > 0 ? '#fca5a5' : '#86efac' }}>{stats.stale}</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Action Toolbar */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem 2rem',
+                background: 'white',
+                borderBottom: '1px solid #e2e8f0',
+                position: 'sticky',
+                top: 0,
+                zIndex: 10
+            }}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                        onClick={() => setViewMode('list')}
                         style={{
-                            padding: '6px 12px',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: viewMode === 'list' ? '#3b82f6' : '#f1f5f9',
+                            color: viewMode === 'list' ? 'white' : '#64748b',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    >📋 List</button>
+                    <button
+                        onClick={() => setViewMode('pipeline')}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: viewMode === 'pipeline' ? '#3b82f6' : '#f1f5f9',
+                            color: viewMode === 'pipeline' ? 'white' : '#64748b',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    >📊 Pipeline</button>
+                    <div style={{ width: '1px', background: '#e2e8f0', margin: '0 0.5rem' }} />
+                    <button
+                        onClick={() => setViewMode('generator')}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '8px',
+                            border: '1px solid #3b82f6',
+                            background: 'white',
+                            color: '#3b82f6',
+                            fontWeight: 500,
+                            cursor: 'pointer'
+                        }}
+                    >🔍 Find Leads</button>
+                    <button
+                        onClick={() => setViewMode('bankers')}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '8px',
+                            border: '1px solid #f59e0b',
+                            background: 'white',
+                            color: '#f59e0b',
+                            fontWeight: 500,
+                            cursor: 'pointer'
+                        }}
+                    >🏦 Bankers</button>
+                    <button
+                        onClick={() => setViewMode('dashboard')}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '8px',
+                            border: '1px solid #22c55e',
+                            background: 'white',
+                            color: '#22c55e',
+                            fontWeight: 500,
+                            cursor: 'pointer'
+                        }}
+                    >📈 Dashboard</button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                        onClick={() => setShowImport(true)}
+                        style={{
+                            padding: '0.5rem 1rem',
                             borderRadius: '8px',
                             border: '1px solid #e2e8f0',
-                            marginRight: '1rem',
                             background: 'white',
-                            color: '#1e293b'
+                            color: '#64748b',
+                            fontWeight: 500,
+                            cursor: 'pointer'
                         }}
-                    >
-                        <option value="All">All Team Leads</option>
-                        {TEAM_MEMBERS.map(m => (
-                            <option key={m.email} value={m.name}>{m.name}</option>
-                        ))}
-                    </select>
-
+                    >📥 Import</button>
                     <button
-                        className="btn-secondary"
-                        onClick={() => setViewMode('dashboard')}
-                        style={{ marginRight: '0.5rem', background: '#f0fdf4', color: '#166534', border: '1px solid #86efac' }}
-                    >
-                        <span className="icon">📊</span> Dashboard
-                    </button>
-
-                    <button
-                        className="btn-secondary"
-                        onClick={() => setViewMode('bankers')}
-                        style={{ marginRight: '0.5rem', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}
-                    >
-                        <span className="icon">🏦</span> Bankers
-                    </button>
-
-                    <button
-                        className="btn-secondary"
-                        onClick={() => setViewMode('generator')}
-                        style={{ marginRight: '1rem', background: '#e0f2fe', color: '#0284c7', border: '1px solid #bae6fd' }}
-                    >
-                        <span className="icon">🔍</span> Find Leads
-                    </button>
-
-                    <div className="segmented-control">
-                        <button
-                            className={viewMode === 'list' ? 'active' : ''}
-                            onClick={() => setViewMode('list')}
-                        >
-                            <span>📄</span> List
-                        </button>
-                        <button
-                            className={viewMode === 'pipeline' ? 'active' : ''}
-                            onClick={() => setViewMode('pipeline')}
-                        >
-                            <span>📊</span> Pipeline
-                        </button>
-                    </div>
-                    <button className="btn-secondary" onClick={() => setShowImport(true)}>
-                        <span className="icon">📥</span> Import Excel
-                    </button>
-                    <button className="btn-primary" onClick={() => setShowAdd(true)}>
-                        <span className="icon">＋</span> New Lead
-                    </button>
+                        onClick={() => setShowAdd(true)}
+                        style={{
+                            padding: '0.5rem 1.25rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                            color: 'white',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
+                        }}
+                    >+ New Lead</button>
                 </div>
             </div>
 
@@ -359,14 +479,33 @@ const LeadList: React.FC = () => {
             )}
 
             {!loading && filteredLeads.length === 0 ? (
-                <div className="empty-state">
-                    <img src={logo} alt="AmPac" style={{ height: '80px', opacity: 0.2, marginBottom: '1.5rem', filter: 'grayscale(100%)' }} />
-                    <h3>No leads found</h3>
-                    <p>Get started by importing your spreadsheet or adding a lead manually.</p>
-                    <div className="empty-actions">
-                        <button className="btn-primary" onClick={() => setShowImport(true)}>Import Excel File</button>
-                        <button className="btn-secondary" onClick={() => setShowAdd(true)}>Add Manually</button>
-                        <button className="btn-secondary" onClick={() => setViewMode('generator')}>🔍 Find Leads</button>
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '4rem 2rem',
+                    textAlign: 'center'
+                }}>
+                    <img src={logo} alt="AmPac" style={{ height: '80px', opacity: 0.15, marginBottom: '1.5rem', filter: 'grayscale(100%)' }} />
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '1.25rem' }}>No leads yet</h3>
+                    <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>Get started by finding new businesses or importing from Excel</p>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button
+                            onClick={() => setViewMode('generator')}
+                            style={{
+                                padding: '0.75rem 1.5rem',
+                                borderRadius: '10px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                                color: 'white',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
+                            }}
+                        >🔍 Find Leads</button>
+                        <button onClick={() => setShowImport(true)} className="btn-secondary">📥 Import Excel</button>
+                        <button onClick={() => setShowAdd(true)} className="btn-secondary">+ Add Manually</button>
                     </div>
                 </div>
             ) : viewMode === 'pipeline' ? (
