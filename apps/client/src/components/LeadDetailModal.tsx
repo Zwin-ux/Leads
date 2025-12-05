@@ -13,6 +13,7 @@ interface LeadDetailModalProps {
 const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate, onDelete }) => {
     const [activeTab, setActiveTab] = useState<'snapshot' | 'research' | 'notes' | 'contacts'>('snapshot');
     const [noteContent, setNoteContent] = useState('');
+    const [noteContext, setNoteContext] = useState<'Call' | 'Email' | 'Meeting' | 'Manual'>('Manual');
     const [aiEmail, setAiEmail] = useState('');
     const [aiAnalysis, setAiAnalysis] = useState('');
     const [loadingAi, setLoadingAi] = useState(false);
@@ -68,17 +69,20 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
             id: Date.now().toString(),
             content: noteContent,
             timestamp: new Date().toISOString(),
-            author: 'You', // In real app, get current user
-            type: 'UserNote' as const
+            author: 'You',
+            type: 'UserNote' as const,
+            context: noteContext
         };
 
         const updatedLead = {
             ...lead,
-            notes: [newNote, ...(lead.notes || [])]
+            notes: [newNote, ...(lead.notes || [])],
+            lastContactDate: new Date().toISOString() // Update last touched
         };
 
         onUpdate(updatedLead);
         setNoteContent('');
+        setNoteContext('Manual');
     };
 
     const handleGenerateEmail = async () => {
@@ -572,24 +576,63 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
 
                     {activeTab === 'notes' && (
                         <div className="notes-view">
-                            <div className="notes-list">
-                                {lead.notes?.map(note => (
-                                    <div key={note.id} className={`note-item ${note.type}`}>
-                                        <div className="note-header">
-                                            <span className="author">{note.author}</span>
-                                            <span className="time">{new Date(note.timestamp).toLocaleString()}</span>
-                                        </div>
-                                        <p>{note.content}</p>
-                                    </div>
-                                ))}
+                            {/* Add Note Section */}
+                            <div className="add-note enhanced">
+                                <div className="note-input-row">
+                                    <select
+                                        value={noteContext}
+                                        onChange={e => setNoteContext(e.target.value as any)}
+                                        className="context-select"
+                                    >
+                                        <option value="Call">📞 Call</option>
+                                        <option value="Email">📧 Email</option>
+                                        <option value="Meeting">🤝 Meeting</option>
+                                        <option value="Manual">✏️ Note</option>
+                                    </select>
+                                    <textarea
+                                        placeholder="What happened? Add details about your interaction..."
+                                        value={noteContent}
+                                        onChange={e => setNoteContent(e.target.value)}
+                                    />
+                                </div>
+                                <button className="btn-primary" onClick={handleSaveNote} disabled={!noteContent.trim()}>
+                                    Add Note
+                                </button>
                             </div>
-                            <div className="add-note">
-                                <textarea
-                                    placeholder="Add a note..."
-                                    value={noteContent}
-                                    onChange={e => setNoteContent(e.target.value)}
-                                />
-                                <button className="btn-primary" onClick={handleSaveNote}>Post Note</button>
+
+                            {/* Notes List - Structured */}
+                            <div className="notes-list structured">
+                                {(!lead.notes || lead.notes.length === 0) ? (
+                                    <div className="no-notes">
+                                        <p>No notes yet. Add your first note above!</p>
+                                    </div>
+                                ) : (
+                                    lead.notes.map(note => {
+                                        const contextIcon = note.context === 'Call' ? '📞' :
+                                            note.context === 'Email' ? '📧' :
+                                                note.context === 'Meeting' ? '🤝' :
+                                                    note.type === 'SystemEvent' ? '⚙️' : '✏️';
+                                        const contextLabel = note.context || (note.type === 'SystemEvent' ? 'System' : 'Note');
+
+                                        return (
+                                            <div key={note.id} className={`note-item structured ${note.type}`}>
+                                                <div className="note-context-badge" title={contextLabel}>
+                                                    {contextIcon}
+                                                </div>
+                                                <div className="note-body">
+                                                    <div className="note-header">
+                                                        <span className="context-label">{contextLabel.toUpperCase()}</span>
+                                                        <span className="separator">•</span>
+                                                        <span className="author">{note.author}</span>
+                                                        <span className="separator">•</span>
+                                                        <span className="time">{new Date(note.timestamp).toLocaleDateString()} {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                    <p className="note-content">{note.content}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
                     )}
@@ -905,6 +948,100 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                     width: 1px;
                     height: 30px;
                     background: #e2e8f0;
+                }
+
+                /* === STRUCTURED NOTES STYLES === */
+                .add-note.enhanced {
+                    margin-bottom: 1.5rem;
+                    padding: 1rem;
+                    background: #f8fafc;
+                    border-radius: 8px;
+                    border: 1px solid #e2e8f0;
+                }
+                .note-input-row {
+                    display: flex;
+                    gap: 0.75rem;
+                    margin-bottom: 0.75rem;
+                }
+                .context-select {
+                    padding: 0.5rem 1rem;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    font-size: 0.9rem;
+                    background: white;
+                    min-width: 130px;
+                }
+                .add-note.enhanced textarea {
+                    flex: 1;
+                    padding: 0.75rem;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    font-size: 0.9rem;
+                    min-height: 60px;
+                    resize: vertical;
+                }
+                .notes-list.structured {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0;
+                }
+                .no-notes {
+                    text-align: center;
+                    padding: 2rem;
+                    color: #94a3b8;
+                }
+                .note-item.structured {
+                    display: flex;
+                    gap: 1rem;
+                    padding: 1rem 0;
+                    border-bottom: 1px solid #f1f5f9;
+                }
+                .note-item.structured:last-child {
+                    border-bottom: none;
+                }
+                .note-context-badge {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    background: #f1f5f9;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.1rem;
+                    flex-shrink: 0;
+                }
+                .note-item.SystemEvent .note-context-badge {
+                    background: #fef3c7;
+                }
+                .note-body {
+                    flex: 1;
+                    min-width: 0;
+                }
+                .note-item.structured .note-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin-bottom: 0.35rem;
+                    font-size: 0.8rem;
+                    color: #64748b;
+                    flex-wrap: wrap;
+                }
+                .note-header .context-label {
+                    font-weight: 600;
+                    color: #475569;
+                }
+                .note-header .separator {
+                    color: #cbd5e1;
+                }
+                .note-header .author {
+                    color: #0284c7;
+                }
+                .note-item.structured .note-content {
+                    margin: 0;
+                    color: #334155;
+                    font-size: 0.925rem;
+                    line-height: 1.5;
+                    white-space: pre-wrap;
                 }
             `}</style>
             </div>

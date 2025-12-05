@@ -94,4 +94,5 @@ export interface Note {
     timestamp: string;
     author: string;
     type: 'UserNote' | 'SystemEvent';
+    context?: 'Call' | 'Email' | 'Meeting' | 'System' | 'Manual';
 }
