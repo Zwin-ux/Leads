@@ -98,9 +98,9 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
     return (
         <div className="lead-generator">
             <div className="generator-header">
-                <button onClick={onCancel} className="back-btn">← Back to Pipeline</button>
-                <h2>🔍 Lead Scout AI</h2>
-                <span className="subtitle">Find SBA-eligible businesses in CA, NV, AZ</span>
+                <button onClick={onCancel} className="back-btn">← Back</button>
+                <h2>Lead Scout</h2>
+                <span className="subtitle">Find SBA-eligible businesses</span>
             </div>
 
             <div className="search-section">
@@ -127,7 +127,7 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                         onClick={handleSearch}
                         disabled={loading || !searchQuery.trim()}
                     >
-                        {loading ? '🔄 Searching...' : '🔍 Find Leads'}
+                        {loading ? 'Searching...' : 'Search'}
                     </button>
                 </div>
 
@@ -151,8 +151,8 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                 {loading && (
                     <div className="loading-state">
                         <div className="spinner"></div>
-                        <p>✨ AI is searching for {searchQuery} in {location}...</p>
-                        <p className="loading-sub">Analyzing SBA eligibility and generating contact info</p>
+                        <p>Searching for {searchQuery} in {location}...</p>
+                        <p className="loading-sub">Analyzing SBA eligibility</p>
                     </div>
                 )}
 
@@ -198,24 +198,24 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                                                 <p className="legal-name">Legal: {business.legalName}</p>
                                             )}
                                             <p className="contact-name">
-                                                👤 {business.firstName} {business.lastName}
-                                                {business.role && <span className="role"> • {business.role}</span>}
+                                                {business.firstName} {business.lastName}
+                                                {business.role && <span className="role"> · {business.role}</span>}
                                             </p>
                                             <p className="contact-details">
-                                                📧 {business.email}
-                                                {business.phone && <span> • 📞 {business.phone}</span>}
+                                                {business.email}
+                                                {business.phone && <span> · {business.phone}</span>}
                                             </p>
-                                            <p className="location">📍 {business.city}, {business.stateOfInc}</p>
+                                            <p className="location">{business.city}, {business.stateOfInc}</p>
 
                                             <div className="quick-stats">
                                                 {business.revenueRange && (
-                                                    <span className="stat">💰 {business.revenueRange}</span>
+                                                    <span className="stat">{business.revenueRange}</span>
                                                 )}
                                                 {business.employeeRange && (
-                                                    <span className="stat">👥 {business.employeeRange}</span>
+                                                    <span className="stat">{business.employeeRange} emp</span>
                                                 )}
                                                 {business.yearsInBusiness && (
-                                                    <span className="stat">📅 {business.yearsInBusiness}+ yrs</span>
+                                                    <span className="stat">{business.yearsInBusiness}+ yrs</span>
                                                 )}
                                             </div>
                                         </div>
@@ -270,7 +270,7 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                                                 </div>
                                             </div>
                                             <div className="sba-analysis">
-                                                <strong>🎯 SBA Fit Analysis:</strong> {business.sbaFitReason}
+                                                <strong>SBA Fit:</strong> {business.sbaFitReason}
                                             </div>
                                             <div className="sos-link">
                                                 <a

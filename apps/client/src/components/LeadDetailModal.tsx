@@ -271,9 +271,9 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                             )}
                         </div>
                         <div className="header-actions">
-                            <button className="btn-secondary" onClick={() => setShowTransfer(true)}>➡️ Transfer</button>
-                            <button className="btn-secondary" onClick={handleSendNow}>📤 Request Docs</button>
-                            {onDelete && <button className="btn-icon delete" onClick={handleDeleteLead} title="Delete Lead">🗑️</button>}
+                            <button className="btn-secondary" onClick={() => setShowTransfer(true)}>Transfer</button>
+                            <button className="btn-secondary" onClick={handleSendNow}>Request Docs</button>
+                            {onDelete && <button className="btn-icon delete" onClick={handleDeleteLead} title="Delete Lead">×</button>}
                             <button className="close-btn" onClick={onClose}>&times;</button>
                         </div>
                     </div>
@@ -584,19 +584,19 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                         onChange={e => setNoteContext(e.target.value as any)}
                                         className="context-select"
                                     >
-                                        <option value="Call">📞 Call</option>
-                                        <option value="Email">📧 Email</option>
-                                        <option value="Meeting">🤝 Meeting</option>
-                                        <option value="Manual">✏️ Note</option>
+                                        <option value="Call">Call</option>
+                                        <option value="Email">Email</option>
+                                        <option value="Meeting">Meeting</option>
+                                        <option value="Manual">Note</option>
                                     </select>
                                     <textarea
-                                        placeholder="What happened? Add details about your interaction..."
+                                        placeholder="Add note..."
                                         value={noteContent}
                                         onChange={e => setNoteContent(e.target.value)}
                                     />
                                 </div>
                                 <button className="btn-primary" onClick={handleSaveNote} disabled={!noteContent.trim()}>
-                                    Add Note
+                                    Add
                                 </button>
                             </div>
 
@@ -604,27 +604,22 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                             <div className="notes-list structured">
                                 {(!lead.notes || lead.notes.length === 0) ? (
                                     <div className="no-notes">
-                                        <p>No notes yet. Add your first note above!</p>
+                                        <p>No notes yet</p>
                                     </div>
                                 ) : (
                                     lead.notes.map(note => {
-                                        const contextIcon = note.context === 'Call' ? '📞' :
-                                            note.context === 'Email' ? '📧' :
-                                                note.context === 'Meeting' ? '🤝' :
-                                                    note.type === 'SystemEvent' ? '⚙️' : '✏️';
                                         const contextLabel = note.context || (note.type === 'SystemEvent' ? 'System' : 'Note');
+                                        const contextClass = note.context?.toLowerCase() || (note.type === 'SystemEvent' ? 'system' : 'note');
 
                                         return (
-                                            <div key={note.id} className={`note-item structured ${note.type}`}>
-                                                <div className="note-context-badge" title={contextLabel}>
-                                                    {contextIcon}
-                                                </div>
+                                            <div key={note.id} className={`note-item structured ${note.type} ctx-${contextClass}`}>
+                                                <div className="note-context-indicator" />
                                                 <div className="note-body">
                                                     <div className="note-header">
-                                                        <span className="context-label">{contextLabel.toUpperCase()}</span>
-                                                        <span className="separator">•</span>
+                                                        <span className="context-label">{contextLabel}</span>
+                                                        <span className="separator">·</span>
                                                         <span className="author">{note.author}</span>
-                                                        <span className="separator">•</span>
+                                                        <span className="separator">·</span>
                                                         <span className="time">{new Date(note.timestamp).toLocaleDateString()} {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                     </div>
                                                     <p className="note-content">{note.content}</p>
@@ -992,27 +987,25 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 }
                 .note-item.structured {
                     display: flex;
-                    gap: 1rem;
-                    padding: 1rem 0;
+                    gap: 0.75rem;
+                    padding: 0.875rem 0;
                     border-bottom: 1px solid #f1f5f9;
                 }
                 .note-item.structured:last-child {
                     border-bottom: none;
                 }
-                .note-context-badge {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 50%;
-                    background: #f1f5f9;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.1rem;
+                .note-context-indicator {
+                    width: 3px;
+                    border-radius: 2px;
+                    background: #94a3b8;
                     flex-shrink: 0;
+                    align-self: stretch;
                 }
-                .note-item.SystemEvent .note-context-badge {
-                    background: #fef3c7;
-                }
+                .note-item.ctx-call .note-context-indicator { background: #22c55e; }
+                .note-item.ctx-email .note-context-indicator { background: #3b82f6; }
+                .note-item.ctx-meeting .note-context-indicator { background: #8b5cf6; }
+                .note-item.ctx-system .note-context-indicator { background: #f59e0b; }
+                .note-item.ctx-note .note-context-indicator { background: #94a3b8; }
                 .note-body {
                     flex: 1;
                     min-width: 0;
@@ -1020,26 +1013,28 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                 .note-item.structured .note-header {
                     display: flex;
                     align-items: center;
-                    gap: 0.5rem;
-                    margin-bottom: 0.35rem;
-                    font-size: 0.8rem;
-                    color: #64748b;
-                    flex-wrap: wrap;
+                    gap: 0.4rem;
+                    margin-bottom: 0.25rem;
+                    font-size: 0.75rem;
+                    color: #94a3b8;
                 }
                 .note-header .context-label {
-                    font-weight: 600;
-                    color: #475569;
+                    font-weight: 500;
+                    color: #64748b;
+                    text-transform: uppercase;
+                    font-size: 0.65rem;
+                    letter-spacing: 0.5px;
                 }
                 .note-header .separator {
-                    color: #cbd5e1;
+                    color: #e2e8f0;
                 }
                 .note-header .author {
-                    color: #0284c7;
+                    color: #475569;
                 }
                 .note-item.structured .note-content {
                     margin: 0;
-                    color: #334155;
-                    font-size: 0.925rem;
+                    color: #1e293b;
+                    font-size: 0.875rem;
                     line-height: 1.5;
                     white-space: pre-wrap;
                 }

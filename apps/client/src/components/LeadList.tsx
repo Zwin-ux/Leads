@@ -371,7 +371,7 @@ const LeadList: React.FC = () => {
                                     />
                                     Last: {lead.lastContactDate || 'Never'}
                                 </span>
-                                {lead.nextAction && <span className="next-action">👉 {lead.nextAction}</span>}
+                                {lead.nextAction && <span className="next-action">{lead.nextAction}</span>}
                             </div>
                             {lead.loanProgram && <div className="lead-program-tag">{lead.loanProgram}</div>}
                         </div>
@@ -384,7 +384,7 @@ const LeadList: React.FC = () => {
                 <div className="modal-backdrop" onClick={() => setEmailPreviewLead(null)}>
                     <div className="modal email-preview-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '650px' }}>
                         <div className="modal-header">
-                            <h2>📧 Email Composer</h2>
+                            <h2>Email Composer</h2>
                             <button className="close-btn" onClick={() => setEmailPreviewLead(null)}>×</button>
                         </div>
                         <div className="modal-body" style={{ padding: '1.5rem' }}>
@@ -403,13 +403,13 @@ const LeadList: React.FC = () => {
                                         flex: 1
                                     }}
                                 >
-                                    <option value="intro">📧 Intro Email</option>
-                                    <option value="followup">🔄 Follow-Up</option>
-                                    <option value="referral">🤝 Referral Partner</option>
-                                    <option value="banker">🏦 Banker Outreach</option>
-                                    <option value="documents">📄 Document Request</option>
-                                    <option value="update">📊 Deal Update</option>
-                                    <option value="winback">💫 Win Back</option>
+                                    <option value="intro">Intro</option>
+                                    <option value="followup">Follow-Up</option>
+                                    <option value="referral">Referral Partner</option>
+                                    <option value="banker">Banker Outreach</option>
+                                    <option value="documents">Document Request</option>
+                                    <option value="update">Deal Update</option>
+                                    <option value="winback">Win Back</option>
                                 </select>
                             </div>
 
@@ -423,8 +423,8 @@ const LeadList: React.FC = () => {
                             </div>
                             {generatingEmail ? (
                                 <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '8px' }}>
-                                    <div style={{ marginBottom: '0.5rem' }}>✨ Generating email...</div>
-                                    <div style={{ fontSize: '0.85rem' }}>Using AI to personalize for {emailPreviewLead.firstName}</div>
+                                    <div style={{ marginBottom: '0.5rem' }}>Generating email...</div>
+                                    <div style={{ fontSize: '0.85rem' }}>Personalizing for {emailPreviewLead.firstName}</div>
                                 </div>
                             ) : (
                                 <textarea
@@ -451,19 +451,20 @@ const LeadList: React.FC = () => {
                                 disabled={generatingEmail}
                                 style={{ opacity: generatingEmail ? 0.5 : 1 }}
                             >
-                                🔄 Regenerate
+                                Regenerate
                             </button>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button className="btn-secondary" onClick={() => setEmailPreviewLead(null)}>Cancel</button>
                                 <button className="btn-primary" onClick={handleSendToOutlook} disabled={generatingEmail}>
-                                    📤 Open in Outlook
+                                    Open in Outlook
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 };
 
