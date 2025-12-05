@@ -66,7 +66,6 @@ export interface EnrichedLead {
 }
 
 // API Keys from environment
-const GOOGLE_PLACES_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY || '';
 const SOS_API_KEY = import.meta.env.VITE_SOS_API_KEY || '';
 const HUNTER_API_KEY = import.meta.env.VITE_HUNTER_API_KEY || '';
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
@@ -85,55 +84,10 @@ export function getAvailableSources(): DataSource[] {
 }
 
 // =====================================================
-// BACKEND PROXY SEARCH (avoids CORS issues)
-// =====================================================
-async function searchViaBackend(query: string, location: string): Promise<RawBusinessResult[]> {
-    try {
-        const url = `${BACKEND_API_URL}/api/search/businesses?query=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
-
-        console.log('🔍 Searching via backend:', query, 'in', location);
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            console.error('Backend search error:', response.status);
-            return [];
-        }
-
-        const data = await response.json();
-
-        if (data.error) {
-            console.error('API error:', data.error);
-            return [];
-        }
-
-        console.log('✅ Found', data.local_results?.length || 0, 'businesses');
-
-        return (data.local_results || []).slice(0, 10).map((place: any) => ({
-            source: 'google_places' as DataSource,
-            name: place.title,
-            address: place.address,
-            city: extractCity(place.address || ''),
-            state: extractState(place.address || ''),
-            phone: place.phone,
-            website: place.website,
-            rating: place.rating,
-            reviewCount: place.reviews,
-            categories: place.type ? [place.type] : [],
-            placeId: place.place_id
-        }));
-    } catch (e) {
-        console.error('Backend search failed:', e);
-        return [];
-    }
-}
-
-// =====================================================
-// GOOGLE PLACES API (direct, may have CORS issues)
-// =====================================================
-// =====================================================
 // GOOGLE PLACES API (via Backend Proxy)
 // =====================================================
+
+
 async function searchGooglePlaces(query: string, location: string): Promise<RawBusinessResult[]> {
     try {
         const searchQuery = `${query} in ${location}`;
