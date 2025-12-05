@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Lead } from '@leads/shared';
 import { apiService } from '../services/apiService';
-import { openaiService } from '../services/openaiService';
+import { openaiService, type EmailTemplateType } from '../services/openaiService';
 import { TEAM_MEMBERS } from '../services/authService';
 import LeadDetailModal from './LeadDetailModal';
 import { PipelineView } from './PipelineView';
@@ -25,6 +25,7 @@ const LeadList: React.FC = () => {
     const [emailPreviewLead, setEmailPreviewLead] = useState<Lead | null>(null);
     const [emailContent, setEmailContent] = useState('');
     const [generatingEmail, setGeneratingEmail] = useState(false);
+    const [emailTemplateType, setEmailTemplateType] = useState<EmailTemplateType>('intro');
 
     useEffect(() => {
         loadLeads();
@@ -160,15 +161,30 @@ const LeadList: React.FC = () => {
         }
     };
 
-    const handleEmailPreview = async (lead: Lead) => {
+    const handleEmailPreview = async (lead: Lead, template: EmailTemplateType = 'intro') => {
         setEmailPreviewLead(lead);
+        setEmailTemplateType(template);
         setGeneratingEmail(true);
         try {
-            const content = await openaiService.generateEmail(lead);
+            const content = await openaiService.generateEmail(lead, template);
             setEmailContent(content);
         } catch (err) {
             console.error("Failed to generate email", err);
             setEmailContent(`Hi ${lead.firstName},\n\nI'd love to connect about financing options for ${lead.company}.\n\nBest regards`);
+        } finally {
+            setGeneratingEmail(false);
+        }
+    };
+
+    const handleRegenerateEmail = async (template: EmailTemplateType) => {
+        if (!emailPreviewLead) return;
+        setEmailTemplateType(template);
+        setGeneratingEmail(true);
+        try {
+            const content = await openaiService.generateEmail(emailPreviewLead, template);
+            setEmailContent(content);
+        } catch (err) {
+            console.error("Failed to regenerate email", err);
         } finally {
             setGeneratingEmail(false);
         }
@@ -181,7 +197,9 @@ const LeadList: React.FC = () => {
         window.open(`mailto:${emailPreviewLead.email}?subject=${subject}&body=${body}`, '_blank');
         setEmailPreviewLead(null);
         setEmailContent('');
+        setEmailTemplateType('intro');
     };
+
 
     const filteredLeads = selectedOwner === 'All'
         ? leads
@@ -333,21 +351,49 @@ const LeadList: React.FC = () => {
             {/* Email Preview Modal */}
             {emailPreviewLead && (
                 <div className="modal-backdrop" onClick={() => setEmailPreviewLead(null)}>
-                    <div className="modal email-preview-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+                    <div className="modal email-preview-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '650px' }}>
                         <div className="modal-header">
-                            <h2>📧 Email Preview</h2>
+                            <h2>📧 Email Composer</h2>
                             <button className="close-btn" onClick={() => setEmailPreviewLead(null)}>×</button>
                         </div>
                         <div className="modal-body" style={{ padding: '1.5rem' }}>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <strong>To:</strong> {emailPreviewLead.email}
+                            {/* Template Selector */}
+                            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <label style={{ fontWeight: 500, color: '#475569' }}>Template:</label>
+                                <select
+                                    value={emailTemplateType}
+                                    onChange={(e) => handleRegenerateEmail(e.target.value as EmailTemplateType)}
+                                    disabled={generatingEmail}
+                                    style={{
+                                        padding: '0.5rem 1rem',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '6px',
+                                        fontSize: '0.9rem',
+                                        flex: 1
+                                    }}
+                                >
+                                    <option value="intro">📧 Intro Email</option>
+                                    <option value="followup">🔄 Follow-Up</option>
+                                    <option value="referral">🤝 Referral Partner</option>
+                                    <option value="banker">🏦 Banker Outreach</option>
+                                    <option value="documents">📄 Document Request</option>
+                                    <option value="update">📊 Deal Update</option>
+                                    <option value="winback">💫 Win Back</option>
+                                </select>
                             </div>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <strong>Subject:</strong> AmPac Business Capital - {emailPreviewLead.company}
+
+                            <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <strong>To:</strong>
+                                <span style={{ color: '#475569' }}>{emailPreviewLead.email}</span>
+                            </div>
+                            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <strong>Subject:</strong>
+                                <span style={{ color: '#475569' }}>AmPac Business Capital - {emailPreviewLead.company}</span>
                             </div>
                             {generatingEmail ? (
-                                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-                                    ✨ Generating personalized email...
+                                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '8px' }}>
+                                    <div style={{ marginBottom: '0.5rem' }}>✨ Generating email...</div>
+                                    <div style={{ fontSize: '0.85rem' }}>Using AI to personalize for {emailPreviewLead.firstName}</div>
                                 </div>
                             ) : (
                                 <textarea
@@ -355,7 +401,7 @@ const LeadList: React.FC = () => {
                                     onChange={(e) => setEmailContent(e.target.value)}
                                     style={{
                                         width: '100%',
-                                        minHeight: '300px',
+                                        minHeight: '320px',
                                         padding: '1rem',
                                         border: '1px solid #e2e8f0',
                                         borderRadius: '8px',
@@ -367,11 +413,21 @@ const LeadList: React.FC = () => {
                                 />
                             )}
                         </div>
-                        <div className="modal-footer" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0' }}>
-                            <button className="btn-secondary" onClick={() => setEmailPreviewLead(null)}>Cancel</button>
-                            <button className="btn-primary" onClick={handleSendToOutlook} disabled={generatingEmail}>
-                                📤 Open in Outlook
+                        <div className="modal-footer" style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between', padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0' }}>
+                            <button
+                                className="btn-secondary"
+                                onClick={() => handleRegenerateEmail(emailTemplateType)}
+                                disabled={generatingEmail}
+                                style={{ opacity: generatingEmail ? 0.5 : 1 }}
+                            >
+                                🔄 Regenerate
                             </button>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button className="btn-secondary" onClick={() => setEmailPreviewLead(null)}>Cancel</button>
+                                <button className="btn-primary" onClick={handleSendToOutlook} disabled={generatingEmail}>
+                                    📤 Open in Outlook
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
