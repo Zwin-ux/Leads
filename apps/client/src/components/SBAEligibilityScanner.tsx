@@ -21,30 +21,41 @@ const QUESTIONS: Question[] = [
     { id: 'q4', text: 'Has the business or owner ever defaulted on a government loan?', type: 'yes_no', correctAnswer: 'no', failureMessage: 'Prior government loan defaults usually disqualify.' },
     { id: 'q5', text: 'Is the business involved in lending, gambling, or speculation?', type: 'yes_no', correctAnswer: 'no', failureMessage: 'Ineligible industry.' },
     { id: 'q6', text: 'Does the business meet SBA size standards?', type: 'yes_no', correctAnswer: 'yes', failureMessage: 'Must meet size standards (revenue/employees).' },
-    { id: 'q7', text: 'Can the business demonstrate a need for credit (Credit Elsewhere Test)?', type: 'yes_no', correctAnswer: 'yes', failureMessage: 'Must demonstrate inability to get credit elsewhere on reasonable terms.' }
+    { id: 'q7', text: 'Can the business demonstrate a need for credit (Credit Elsewhere Test)?', type: 'yes_no', correctAnswer: 'yes', failureMessage: 'Must demonstrate inability to get credit elsewhere on reasonable terms.' },
+    { id: 'q8', text: 'Is the SBA listed as an "Intended User" on the appraisal?', type: 'yes_no', correctAnswer: 'yes', failureMessage: 'FATAL: Appraisal must list SBA as Intended User.' }
 ];
 
 export const SBAEligibilityScanner: React.FC<SBAEligibilityScannerProps> = ({ lead, onUpdateNote }) => {
     const [answers, setAnswers] = useState<Record<string, 'yes' | 'no' | null>>({});
+    const [occupancy, setOccupancy] = useState({ total: 0, occupied: 0 });
     const [result, setResult] = useState<'eligible' | 'ineligible' | 'review' | null>(null);
     const [failureReasons, setFailureReasons] = useState<string[]>([]);
 
     useEffect(() => {
-        // Initialize answers if saved in notes (simple parsing for now)
-        // In a real app, we'd have a dedicated field
+        // In reality, we could pull existing data from Lead object if available
     }, []);
 
     const handleAnswer = (questionId: string, value: 'yes' | 'no') => {
         const newAnswers = { ...answers, [questionId]: value };
         setAnswers(newAnswers);
-        evaluate(newAnswers);
+        evaluate(newAnswers, occupancy);
     };
 
-    const evaluate = (currentAnswers: Record<string, 'yes' | 'no' | null>) => {
+    const handleOccupancyChange = (field: 'total' | 'occupied', value: number) => {
+        const newOccupancy = { ...occupancy, [field]: value };
+        setOccupancy(newOccupancy);
+        evaluate(answers, newOccupancy);
+    };
+
+    const evaluate = (
+        currentAnswers: Record<string, 'yes' | 'no' | null>,
+        currentOccupancy: { total: number; occupied: number }
+    ) => {
         const reasons: string[] = [];
         let isIneligible = false;
         let isComplete = true;
 
+        // 1. Check Standard Questions
         QUESTIONS.forEach(q => {
             const answer = currentAnswers[q.id];
             if (answer === null || answer === undefined) {
@@ -55,11 +66,24 @@ export const SBAEligibilityScanner: React.FC<SBAEligibilityScannerProps> = ({ le
             }
         });
 
+        // 2. Check Occupancy Logic
+        if (currentOccupancy.total > 0) {
+            const ratio = currentOccupancy.occupied / currentOccupancy.total;
+            if (ratio < 0.51) {
+                isIneligible = true;
+                reasons.push(`Occupancy Ineligible: ${(ratio * 100).toFixed(1)}% (Must be ≥ 51%)`);
+            }
+        } else {
+            // If occupancy is 0, we assume it's not entered yet, so not complete? 
+            // Or maybe it's not a RE deal? Let's check loan purpose if possible, but for now allow 0 to skip if implied.
+        }
+
         setFailureReasons(reasons);
 
         if (isIneligible) {
             setResult('ineligible');
-        } else if (isComplete) {
+        } else if (isComplete && (currentOccupancy.total === 0 || currentOccupancy.occupied > 0)) {
+            // Only mark eligible if questions are done
             setResult('eligible');
         } else {
             setResult(null);
@@ -68,7 +92,10 @@ export const SBAEligibilityScanner: React.FC<SBAEligibilityScannerProps> = ({ le
 
     const handleSave = () => {
         const timestamp = new Date().toISOString();
-        const summary = `SBA Eligibility Check (${timestamp}):\nResult: ${result?.toUpperCase()}\n` +
+        const occPct = occupancy.total > 0 ? ((occupancy.occupied / occupancy.total) * 100).toFixed(1) : 'N/A';
+        const summary = `SBA Eligibility Check (${timestamp}):\n` +
+            `Result: ${result?.toUpperCase()}\n` +
+            `Occupancy: ${occPct}%\n\n` +
             QUESTIONS.map(q => `- ${q.text}: ${answers[q.id]?.toUpperCase()}`).join('\n') +
             (failureReasons.length > 0 ? `\n\nIssues:\n${failureReasons.join('\n')}` : '');
 
@@ -83,6 +110,37 @@ export const SBAEligibilityScanner: React.FC<SBAEligibilityScannerProps> = ({ le
                 <p>Quick check for 7(a) and 504 eligibility for <strong>{lead.company || lead.businessName}</strong>.</p>
             </div>
 
+            {/* Occupancy Section */}
+            <div className="section-title">🏢 Occupancy Check (51% Rule)</div>
+            <div className="occupancy-inputs">
+                <div className="input-group">
+                    <label>Total Building SqFt</label>
+                    <input
+                        type="number"
+                        value={occupancy.total || ''}
+                        onChange={(e) => handleOccupancyChange('total', Number(e.target.value))}
+                        min="0"
+                    />
+                </div>
+                <div className="input-group">
+                    <label>Occupied by Borrower SqFt</label>
+                    <input
+                        type="number"
+                        value={occupancy.occupied || ''}
+                        onChange={(e) => handleOccupancyChange('occupied', Number(e.target.value))}
+                        min="0"
+                    />
+                </div>
+                <div className="status-display">
+                    {occupancy.total > 0 && (
+                        <span className={(occupancy.occupied / occupancy.total) >= 0.51 ? 'pass' : 'fail'}>
+                            {((occupancy.occupied / occupancy.total) * 100).toFixed(1)}%
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            <div className="section-title">❓ Qualification Questions</div>
             <div className="questions-list">
                 {QUESTIONS.map(q => (
                     <div key={q.id} className="question-item">
@@ -123,23 +181,46 @@ export const SBAEligibilityScanner: React.FC<SBAEligibilityScannerProps> = ({ le
                     background: #f8fafc;
                     border-radius: 8px;
                 }
-                .scanner-header {
-                    margin-bottom: 1.5rem;
+                .section-title {
+                    font-size: 0.95rem;
+                    font-weight: 600;
+                    color: #475569;
+                    margin: 1.5rem 0 0.75rem 0;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
                 }
-                .scanner-header h3 {
-                    margin: 0 0 0.5rem 0;
-                    color: #1e293b;
+                .occupancy-inputs {
+                    display: flex;
+                    gap: 1rem;
+                    align-items: flex-end;
+                    background: white;
+                    padding: 1rem;
+                    border-radius: 6px;
+                    border: 1px solid #e2e8f0;
                 }
-                .scanner-header p {
-                    margin: 0;
+                .input-group label {
+                    display: block;
+                    font-size: 0.8rem;
                     color: #64748b;
-                    font-size: 0.9rem;
+                    margin-bottom: 0.25rem;
                 }
+                .input-group input {
+                    padding: 0.5rem;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 4px;
+                    width: 120px;
+                }
+                .status-display span {
+                    font-size: 1.25rem;
+                    font-weight: 700;
+                }
+                .status-display .pass { color: #16a34a; }
+                .status-display .fail { color: #dc2626; }
+                
                 .questions-list {
                     display: flex;
                     flex-direction: column;
-                    gap: 1rem;
-                    margin-bottom: 1.5rem;
+                    gap: 0.5rem;
                 }
                 .question-item {
                     display: flex;
@@ -177,7 +258,7 @@ export const SBAEligibilityScanner: React.FC<SBAEligibilityScannerProps> = ({ le
                 .result-box {
                     padding: 1rem;
                     border-radius: 8px;
-                    margin-top: 1rem;
+                    margin-top: 1.5rem;
                 }
                 .result-box.eligible {
                     background: #dcfce7;
@@ -188,13 +269,6 @@ export const SBAEligibilityScanner: React.FC<SBAEligibilityScannerProps> = ({ le
                     background: #fee2e2;
                     border: 1px solid #fca5a5;
                     color: #991b1b;
-                }
-                .result-box h4 {
-                    margin: 0 0 0.5rem 0;
-                }
-                .result-box ul {
-                    margin: 0 0 1rem 0;
-                    padding-left: 1.5rem;
                 }
             `}</style>
         </div>

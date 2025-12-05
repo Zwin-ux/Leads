@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Lead, Document, DocumentType } from '@leads/shared';
+import { EmailAction } from './EmailAction';
 
 // Document type labels - inline to avoid shared package runtime export issues
 const DOC_TYPE_LABELS: Record<DocumentType, string> = {
@@ -30,7 +31,9 @@ const DOC_TYPE_LABELS: Record<DocumentType, string> = {
     'accounts_receivable': 'A/R Aging',
     'accounts_payable': 'A/P Aging',
     'equipment_list': 'Equipment List',
-    'other': 'Other'
+    'other': 'Other',
+    'sba_form_1244': 'SBA Form 1244 (Application)',
+    'credit_report': 'Credit Report'
 };
 
 // 504 Loan document checklist
@@ -79,7 +82,6 @@ const SENDNOW_URL = 'https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/
 export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
     lead,
     onUpdateDocument,
-    onRequestDocs,
     onApplyTemplate
 }) => {
     // Get checklist based on loan program
@@ -139,9 +141,44 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
         onUpdateDocument(doc.id, updates);
     };
 
-    const handleRequestAll = () => {
-        const missingTypes = missingDocs.map(d => d.type);
-        onRequestDocs(missingTypes);
+
+
+    // SBA Expiration Rules Logic
+    const EXPIRATION_RULES: Record<string, number> = {
+        'appraisal': 365,
+        'environmental_phase1': 365,
+        'financials_interim': 120,
+        'debt_schedule': 120,
+        'personal_financial_statement': 120,
+        'sba_form_1244': 90,
+        'credit_report': 90,
+        'default': 0 // No expiration
+    };
+
+    const checkExpiration = (type: DocumentType, dateStr?: string) => {
+        if (!dateStr) return null;
+
+        // Default rule
+        let daysValid = EXPIRATION_RULES[type] || EXPIRATION_RULES['default'];
+
+        // Group matches
+        if (type.includes('financials') || type.includes('debt') || type.includes('personal')) daysValid = 120;
+        if (type === 'appraisal' || type === 'environmental_phase1' || type === 'environmental_phase2') daysValid = 365;
+
+        if (daysValid === 0) return null;
+
+        const docDate = new Date(dateStr);
+        const today = new Date();
+        const diffTime = Math.abs(today.getTime() - docDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const ageInDays = diffDays;
+
+        if (ageInDays > daysValid) {
+            return { status: 'expired', message: `Expired (${ageInDays} days old)` };
+        } else if (ageInDays > daysValid - 30) {
+            return { status: 'warning', message: `Expires in ${daysValid - ageInDays} days` };
+        }
+        return null;
     };
 
     return (
@@ -161,22 +198,24 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                         {needed > 0 && <span className="missing"> • {needed} Missing</span>}
                     </span>
                 </div>
-                <button
-                    className="btn-secondary request-btn"
-                    onClick={handleRequestAll}
-                    disabled={missingDocs.length === 0}
-                >
-                    Request Docs
-                </button>
-                {onApplyTemplate && (
-                    <button
-                        className="btn-secondary"
-                        onClick={() => onApplyTemplate(checklistTemplate)}
-                        style={{ marginLeft: '0.5rem' }}
-                    >
-                        Apply {lead.loanProgram || '504'} Template
-                    </button>
-                )}
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <EmailAction
+                        to={lead.email}
+                        subject={`Missing Documents for ${lead.company || lead.businessName} - SBA Application`}
+                        body={`Hi ${lead.firstName},\n\nWe are moving forward with your ${lead.loanProgram || 'SBA'} application. Please upload the following documents to the secure portal at your earliest convenience:\n\n${missingDocs.map(d => `- ${d.label}`).join('\n')}\n\nSecure Upload Link:\n${SENDNOW_URL}\n\nThank you,\nAmPac Business Capital`}
+                        label={`Request ${missingDocs.length} Missing`}
+                        variant="secondary"
+                        icon="✉️"
+                    />
+                    {onApplyTemplate && (
+                        <button
+                            className="btn-secondary request-btn"
+                            onClick={() => onApplyTemplate(checklistTemplate)}
+                        >
+                            Apply {lead.loanProgram || '504'} Template
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Document list */}
@@ -194,12 +233,24 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                         </span>
                         <div className="doc-info">
                             <span className="doc-name">{doc.label}</span>
-                            {doc.receivedDate && (
-                                <span className="doc-date">Received {doc.receivedDate}</span>
-                            )}
-                            {doc.requestedDate && doc.status === 'requested' && (
-                                <span className="doc-date">Requested {doc.requestedDate}</span>
-                            )}
+                            <div className="doc-meta">
+                                {doc.receivedDate && (
+                                    <span className="doc-date">Received {doc.receivedDate}</span>
+                                )}
+                                {doc.requestedDate && doc.status === 'requested' && (
+                                    <span className="doc-date">Requested {doc.requestedDate}</span>
+                                )}
+                                            const status = checkExpiration(doc.type, doc.documentDate);
+                                            if (!status) return null;
+                                            return (
+                                                <span className={`validity-badge ${status.status}`}>
+                                                    {status.status === 'expired' ? '❌' : '⚠️'} {status.message}
+                                                </span>
+                                            );
+                                        })()}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <select
                             className="doc-status-select"
@@ -215,9 +266,9 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                         </select>
                     </div>
                 ))}
-            </div>
+        </div>
 
-            {/* SendNow link */}
+            {/* SendNow link */ }
             <div className="sendnow-link">
                 <a href={SENDNOW_URL} target="_blank" rel="noopener noreferrer">
                     Secure Upload Portal (SendNow)
@@ -261,6 +312,11 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                 .request-btn {
                     padding: 0.5rem 1rem;
                     font-size: 0.85rem;
+                    background: white;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    color: #475569;
                 }
                 .doc-list {
                     display: flex;
@@ -304,9 +360,46 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                     font-size: 0.875rem;
                     color: #1e293b;
                 }
+                .doc-meta {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.25rem;
+                }
                 .doc-date {
                     font-size: 0.75rem;
                     color: #64748b;
+                }
+                .doc-validity {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin-top: 0.25rem;
+                }
+                .date-input {
+                    font-size: 0.75rem;
+                    padding: 0.1rem 0.25rem;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 3px;
+                    color: #475569;
+                }
+                .validity-badge {
+                    font-size: 0.75rem;
+                    padding: 0.1rem 0.4rem;
+                    border-radius: 999px;
+                    font-weight: 600;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.25rem;
+                }
+                .validity-badge.expired {
+                    background: #fee2e2;
+                    color: #991b1b;
+                    border: 1px solid #fca5a5;
+                }
+                .validity-badge.warning {
+                    background: #fffbeb;
+                    color: #b45309;
+                    border: 1px solid #fcd34d;
                 }
                 .doc-status-select {
                     padding: 0.25rem 0.5rem;
@@ -331,6 +424,6 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                     text-decoration: underline;
                 }
             `}</style>
-        </div>
+        </div >
     );
 };

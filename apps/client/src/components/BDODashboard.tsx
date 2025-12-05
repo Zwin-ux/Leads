@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import type { Lead } from '@leads/shared';
 import { authService } from '../services/authService';
 import { PipelineView } from './PipelineView';
+import { FeeCalculator } from './FeeCalculator';
 
 interface BDODashboardProps {
     leads: Lead[];
@@ -39,72 +40,92 @@ export const BDODashboard: React.FC<BDODashboardProps> = ({ leads, onUpdateLead,
     }, [bdoLeads]);
 
     return (
-        <div className="bdo-dashboard" style={{ padding: '2rem', background: '#f8fafc', minHeight: '100vh' }}>
+        <div className="dashboard-container">
             {/* Header Section */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <header className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 style={{ fontSize: '1.8rem', color: '#1e293b', marginBottom: '0.5rem' }}>
-                        🚀 Business Development
-                    </h1>
-                    <p style={{ color: '#64748b' }}>
+                    <h1>Business Development</h1>
+                    <p className="text-muted mt-1">
                         Welcome back, {currentUser?.name.split(' ')[0]}. You have <strong>{bdoLeads.length}</strong> active prospects.
                     </p>
                 </div>
                 <div>
-                    <button
-                        onClick={onFindLeads}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.5)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem'
-                        }}
-                    >
+                    <button className="btn-primary flex items-center gap-2" onClick={onFindLeads}>
                         <span>🔍</span> Find New Leads
                     </button>
                 </div>
-            </div>
+            </header>
 
             {/* Stats Overview */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
-                <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                    <div style={{ color: '#64748b', fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: '600' }}>New Leads</div>
-                    <div style={{ fontSize: '2rem', fontWeight: '700', color: '#3b82f6' }}>{stats.new}</div>
+            <div className="grid grid-cols-4 gap-6 mb-8">
+                <div className="card-base p-6">
+                    <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2">New Leads</div>
+                    <div className="text-3xl font-bold text-[hsl(var(--action))]">{stats.new}</div>
                 </div>
-                <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                    <div style={{ color: '#64748b', fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: '600' }}>Working</div>
-                    <div style={{ fontSize: '2rem', fontWeight: '700', color: '#f59e0b' }}>{stats.working}</div>
+                <div className="card-base p-6">
+                    <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Working</div>
+                    <div className="text-3xl font-bold text-amber-500">{stats.working}</div>
                 </div>
-                <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                    <div style={{ color: '#64748b', fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: '600' }}>Proposals</div>
-                    <div style={{ fontSize: '2rem', fontWeight: '700', color: '#10b981' }}>{stats.proposal}</div>
+                <div className="card-base p-6">
+                    <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Proposals</div>
+                    <div className="text-3xl font-bold text-[hsl(var(--success))]">{stats.proposal}</div>
                 </div>
-                <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', color: 'white' }}>
-                    <div style={{ opacity: 0.8, fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: '600' }}>Conversion Rate</div>
-                    <div style={{ fontSize: '2rem', fontWeight: '700' }}>{stats.conversionRate}</div>
+                <div className="card-base p-6 bg-slate-900 text-white relative overflow-hidden">
+                    <div className="relative z-10">
+                        <div className="text-xs font-bold opacity-70 uppercase tracking-wider mb-2">Conversion Rate</div>
+                        <div className="text-3xl font-bold">{stats.conversionRate}</div>
+                    </div>
                 </div>
             </div>
 
-            {/* Pipeline Board */}
-            <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-                <h2 style={{ fontSize: '1.25rem', color: '#1e293b', marginBottom: '1.5rem' }}>My Pipeline</h2>
-                <PipelineView
-                    leads={bdoLeads}
-                    stages={['New', 'In Process', 'Qualified', 'Proposal', 'Negotiation']}
-                    onLeadClick={(_lead: Lead) => { /* Handle click - maybe open modal? */ }}
-                    onLeadMove={(id, stage) => {
-                        const lead = leads.find(l => l.id === id);
-                        if (lead) onUpdateLead({ ...lead, stage: stage as any });
-                    }}
-                />
+            {/* Tools & Pipeline Grid */}
+            <div className="grid grid-cols-[2fr_1fr] gap-6">
+                {/* Pipeline Board */}
+                <div className="card-base p-6 min-h-[600px]">
+                    <h2 className="mb-6">My Pipeline</h2>
+                    <PipelineView
+                        leads={bdoLeads}
+                        stages={['New', 'In Process', 'Qualified', 'Proposal', 'Negotiation']}
+                        onLeadClick={(_lead: Lead) => { /* Handle click - maybe open modal? */ }}
+                        onLeadMove={(id, stage) => {
+                            const lead = leads.find(l => l.id === id);
+                            if (lead) onUpdateLead({ ...lead, stage: stage as any });
+                        }}
+                    />
+                </div>
+
+                {/* Right Column: Tools */}
+                <div className="flex flex-col gap-6">
+                    <FeeCalculator />
+                </div>
             </div>
+
+            {/* Utility Styles for this component specifically if needed, but relying on global mostly */}
+            <style>{`
+                .grid { display: grid; }
+                .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+                .grid-cols-[2fr_1fr] { grid-template-columns: 2fr 1fr; }
+                .gap-6 { gap: 1.5rem; }
+                .flex { display: flex; }
+                .flex-col { flex-direction: column; }
+                .justify-between { justify-content: space-between; }
+                .items-center { align-items: center; }
+                .mb-8 { margin-bottom: 2rem; }
+                .mb-6 { margin-bottom: 1.5rem; }
+                .mb-2 { margin-bottom: 0.5rem; }
+                .mt-1 { margin-top: 0.25rem; }
+                .p-6 { padding: 1.5rem; }
+                .uppercase { text-transform: uppercase; }
+                .tracking-wider { letter-spacing: 0.05em; }
+                .font-bold { font-weight: 700; }
+                .text-3xl { font-size: 2rem; }
+                .text-amber-500 { color: #f59e0b; }
+                .bg-slate-900 { background: #0f172a; }
+                .text-white { color: white; }
+                .relative { position: relative; }
+                .overflow-hidden { overflow: hidden; }
+                .min-h-\[600px\] { min-height: 600px; }
+            `}</style>
         </div>
     );
 };

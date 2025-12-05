@@ -198,6 +198,47 @@ export const ClosingChecklist: React.FC<ClosingChecklistProps> = ({
                 </div>
             </div>
 
+            {/* E-Tran Integration Section (Mock) */}
+            <div className="checklist-body" style={{ marginBottom: '1rem', padding: '1rem', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h3 className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+                            <span>🏛️</span> SBA E-Tran Connection
+                        </h3>
+                        <p className="text-xs text-emerald-700 mt-1">Submit final loan package to SBA Capital Access Financial System (CAFS).</p>
+                    </div>
+                    <div>
+                        {lead.etranAppId ? (
+                            <div className="text-right">
+                                <div className="text-xs font-bold text-emerald-800">SUBMISSION ACTIVE</div>
+                                <div className="text-xs text-emerald-600 font-mono">APP ID: {lead.etranAppId}</div>
+                            </div>
+                        ) : (
+                            <button
+                                className="bg-emerald-600 text-white text-xs font-bold py-2 px-4 rounded shadow-sm hover:bg-emerald-700 transition-colors"
+                                onClick={() => {
+                                    // defined inline for demo simplicity, would be a prop/service call
+                                    const btn = document.getElementById('etran-btn');
+                                    if (btn) {
+                                        btn.innerText = 'Connecting to SBA CAFS...';
+                                        (btn as HTMLButtonElement).disabled = true;
+                                        setTimeout(() => {
+                                            btn.innerText = 'Validating 1502 Info...';
+                                        }, 1500);
+                                        setTimeout(() => {
+                                            onUpdateLead({ etranAppId: `SBA-${Math.floor(Math.random() * 10000000)}` });
+                                        }, 3500);
+                                    }
+                                }}
+                                id="etran-btn"
+                            >
+                                Submit to E-Tran
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             {/* Checklist Sections */}
             <div className="checklist-body">
                 {renderSection('Pre-Closing', preClosing, '📋')}

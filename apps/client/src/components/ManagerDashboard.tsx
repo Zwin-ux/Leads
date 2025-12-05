@@ -2,6 +2,9 @@ import React, { useState, useMemo } from 'react';
 import type { Lead } from '@leads/shared';
 import { TEAM_MEMBERS } from '../services/authService';
 import { ReferralStats } from './ReferralStats';
+import { ResourceLibrary } from './ResourceLibrary';
+import { EmailAction } from './EmailAction';
+import { BankerPortal } from './BankerPortal';
 
 interface ManagerDashboardProps {
     leads: Lead[];
@@ -10,7 +13,7 @@ interface ManagerDashboardProps {
     onBack: () => void;
 }
 
-export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
+const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
     leads,
     onReassignLead,
     onSelectLead,
@@ -54,6 +57,8 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         };
     }, [leads]);
 
+    const [showPortal, setShowPortal] = useState(false);
+
     // Pipeline by rep
     const pipelineByRep = useMemo(() => {
         const byRep: Record<string, { total: number; new: number; inProcess: number; closing: number }> = {};
@@ -89,85 +94,109 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
     };
 
     return (
-        <div className="manager-dashboard">
-            <div className="dashboard-header">
-                <div className="header-left">
-                    <button className="btn-secondary" onClick={onBack}>← Back to Leads</button>
+        <div className="dashboard-container">
+            <header className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-4">
+                    <button className="btn-secondary" onClick={onBack}>← Back</button>
                     <h1>Team Dashboard</h1>
                 </div>
-            </div>
+                <button
+                    className="btn-secondary flex items-center gap-2 text-sm"
+                    onClick={() => setShowPortal(true)}
+                >
+                    🌐 Demo Bank Portal
+                </button>
+            </header>
+
+            {showPortal && (
+                <BankerPortal
+                    bankName="Comerica"
+                    leads={leads}
+                    onClose={() => setShowPortal(false)}
+                />
+            )}
 
             {/* Metrics Row */}
-            <div className="metrics-row">
-                <div className="metric-card">
-                    <span className="metric-value">{formatCurrency(metrics.ytdFunded)}</span>
-                    <span className="metric-label">YTD Funded</span>
+            <div className="grid grid-cols-4 gap-6 mb-8">
+                <div className="card-base p-6">
+                    <div className="text-3xl font-bold text-slate-900">{formatCurrency(metrics.ytdFunded)}</div>
+                    <div className="text-xs font-bold text-muted uppercase tracking-wider mt-1">YTD Funded</div>
                 </div>
-                <div className="metric-card">
-                    <span className="metric-value">{metrics.fundedCount}</span>
-                    <span className="metric-label">Deals Closed</span>
+                <div className="card-base p-6">
+                    <div className="text-3xl font-bold text-slate-900">{metrics.fundedCount}</div>
+                    <div className="text-xs font-bold text-muted uppercase tracking-wider mt-1">Deals Closed</div>
                 </div>
-                <div className="metric-card highlight">
-                    <span className="metric-value">{metrics.closingThisMonth}</span>
-                    <span className="metric-label">Closing This Month</span>
+                <div className="card-base p-6 bg-blue-50 border-blue-200">
+                    <div className="text-3xl font-bold text-blue-700">{metrics.closingThisMonth}</div>
+                    <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mt-1">Closing This Month</div>
                 </div>
-                <div className="metric-card alert">
-                    <span className="metric-value">{metrics.staleCount}</span>
-                    <span className="metric-label">Stale Leads (7+ days)</span>
+                <div className="card-base p-6 bg-amber-50 border-amber-200">
+                    <div className="text-3xl font-bold text-amber-700">{metrics.staleCount}</div>
+                    <div className="text-xs font-bold text-amber-600 uppercase tracking-wider mt-1">Stale Leads (7+ days)</div>
                 </div>
             </div>
 
-            <div className="dashboard-grid">
+            <div className="grid grid-cols-2 gap-6 mb-8">
                 {/* Pipeline by Rep */}
-                <div className="panel pipeline-panel">
+                <div className="card-base p-6">
                     <h3>Pipeline by Rep</h3>
-                    <div className="rep-list">
+                    <div className="flex flex-col gap-2 mt-4">
                         {pipelineByRep.map(([rep, data]) => (
                             <div
                                 key={rep}
-                                className={`rep-row ${selectedRep === rep ? 'selected' : ''}`}
+                                className={`flex items-center gap-4 p-2 rounded-lg cursor-pointer transition-colors ${selectedRep === rep ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-slate-50'}`}
                                 onClick={() => setSelectedRep(selectedRep === rep ? null : rep)}
                             >
-                                <div className="rep-info">
-                                    <span className="rep-name">{rep}</span>
-                                    <span className="rep-total">{data.total} leads</span>
+                                <div className="min-w-[120px]">
+                                    <div className="font-medium text-slate-800 text-sm">{rep}</div>
+                                    <div className="text-xs text-muted">{data.total} leads</div>
                                 </div>
-                                <div className="rep-bars">
-                                    <span className="bar new" style={{ width: `${(data.new / data.total) * 100}%` }} title={`${data.new} New`} />
-                                    <span className="bar process" style={{ width: `${(data.inProcess / data.total) * 100}%` }} title={`${data.inProcess} In Process`} />
-                                    <span className="bar closing" style={{ width: `${(data.closing / data.total) * 100}%` }} title={`${data.closing} Closing`} />
+                                <div className="flex-1 flex h-3 bg-slate-100 rounded-full overflow-hidden">
+                                    <span style={{ width: `${(data.new / data.total) * 100}%` }} className="bg-blue-500 h-full" title="New" />
+                                    <span style={{ width: `${(data.inProcess / data.total) * 100}%` }} className="bg-amber-500 h-full" title="Processing" />
+                                    <span style={{ width: `${(data.closing / data.total) * 100}%` }} className="bg-emerald-500 h-full" title="Closing" />
+                                </div>
+                                <div onClick={(e) => e.stopPropagation()}>
+                                    <EmailAction
+                                        to={`${rep.toLowerCase().replace(' ', '.')}@ampac.com`}
+                                        subject={`Update on Pipeline`}
+                                        body={`Hi ${rep},\n\nCan we sync up on your active deals? I see you have ${data.closing} closing soon.\n\nThanks,`}
+                                        variant="icon"
+                                        icon="👋"
+                                        label="Nudge"
+                                    />
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <div className="bar-legend">
-                        <span><span className="dot new" /> New</span>
-                        <span><span className="dot process" /> Processing</span>
-                        <span><span className="dot closing" /> Closing</span>
+                    <div className="flex gap-4 mt-4 text-xs text-muted">
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> New</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> Processing</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Closing</span>
                     </div>
                 </div>
 
                 {/* Stale Leads Alert */}
-                <div className="panel stale-panel">
+                <div className="card-base p-6">
                     <h3>🚨 Stale Lead Alerts</h3>
-                    <div className="stale-list">
+                    <div className="flex flex-col gap-2 mt-4 max-h-[300px] overflow-y-auto pr-2">
                         {metrics.staleLeads.slice(0, 10).map(lead => (
-                            <div key={lead.id} className="stale-item">
-                                <div className="stale-info" onClick={() => onSelectLead(lead)}>
-                                    <span className="stale-company">{lead.company || lead.businessName}</span>
-                                    <span className="stale-owner">{lead.owner}</span>
+                            <div key={lead.id} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border-l-4 border-amber-400">
+                                <div className="cursor-pointer" onClick={() => onSelectLead(lead)}>
+                                    <div className="font-medium text-slate-800 text-sm">{lead.company || lead.businessName}</div>
+                                    <div className="text-xs text-muted">{lead.owner}</div>
                                 </div>
-                                <span className="stale-date">{lead.lastContactDate || 'Never'}</span>
+                                <span className="text-xs font-bold text-amber-800">{lead.lastContactDate || 'Never'}</span>
                             </div>
                         ))}
                         {metrics.staleLeads.length === 0 && (
-                            <div className="empty-state">No stale leads! 🎉</div>
+                            <div className="p-8 text-center text-muted">No stale leads! 🎉</div>
                         )}
                     </div>
                 </div>
 
                 {/* Referral Stats */}
-                <div className="panel referral-panel" style={{ gridColumn: '1 / -1' }}>
+                <div className="card-base p-6 col-span-2">
                     <h3>Referral Intelligence</h3>
                     <ReferralStats
                         leads={leads}
@@ -183,44 +212,51 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                         })()}
                     />
                 </div>
+
+                {/* Resource Library (New) */}
+                <div className="card-base p-6 col-span-2">
+                    <ResourceLibrary />
+                </div>
             </div>
 
             {/* Rep's Leads (when selected) */}
             {selectedRep && (
-                <div className="panel rep-leads-panel">
-                    <h3>{selectedRep}'s Leads ({repLeads.length})</h3>
-                    <div className="leads-table">
-                        <div className="table-header">
-                            <span>Company</span>
+                <div className="card-base p-6 w-full">
+                    <h3 className="mb-4">{selectedRep}'s Leads ({repLeads.length})</h3>
+                    <div className="w-full text-sm">
+                        <div className="grid grid-cols-6 gap-4 p-3 bg-slate-100 rounded-t-lg font-semibold text-slate-600">
+                            <span className="col-span-2">Company</span>
                             <span>Stage</span>
                             <span>Program</span>
                             <span>Amount</span>
-                            <span>Last Touch</span>
                             <span>Actions</span>
                         </div>
                         {repLeads.map(lead => (
-                            <div key={lead.id} className="table-row">
-                                <span className="company-cell" onClick={() => onSelectLead(lead)}>
+                            <div key={lead.id} className="grid grid-cols-6 gap-4 p-3 border-b border-slate-100 items-center hover:bg-slate-50">
+                                <span className="col-span-2 font-medium text-blue-600 cursor-pointer hover:underline" onClick={() => onSelectLead(lead)}>
                                     {lead.company || lead.businessName}
                                 </span>
                                 <span>{lead.dealStage || lead.stage}</span>
                                 <span>{lead.loanProgram}</span>
                                 <span>{lead.loanAmount ? formatCurrency(lead.loanAmount) : '—'}</span>
-                                <span>{lead.lastContactDate || 'Never'}</span>
-                                <span className="actions-cell">
+                                <span className="flex items-center gap-2">
                                     {reassignLeadId === lead.id ? (
-                                        <div className="reassign-form">
-                                            <select value={newOwner} onChange={e => setNewOwner(e.target.value)}>
+                                        <div className="flex bg-white border rounded p-1 shadow-sm items-center gap-1 absolute z-10">
+                                            <select
+                                                value={newOwner}
+                                                onChange={e => setNewOwner(e.target.value)}
+                                                className="text-xs p-1 border rounded"
+                                            >
                                                 <option value="">Select...</option>
                                                 {TEAM_MEMBERS.filter(m => m.name !== selectedRep).map(m => (
                                                     <option key={m.email} value={m.name}>{m.name}</option>
                                                 ))}
                                             </select>
-                                            <button onClick={() => handleReassign(lead.id)}>✓</button>
-                                            <button onClick={() => setReassignLeadId(null)}>✕</button>
+                                            <button className="text-green-600 px-2 font-bold" onClick={() => handleReassign(lead.id)}>✓</button>
+                                            <button className="text-red-500 px-2 font-bold" onClick={() => setReassignLeadId(null)}>✕</button>
                                         </div>
                                     ) : (
-                                        <button className="btn-text" onClick={() => setReassignLeadId(lead.id)}>
+                                        <button className="text-xs text-blue-500 hover:text-blue-700" onClick={() => setReassignLeadId(lead.id)}>
                                             Reassign
                                         </button>
                                     )}
@@ -232,247 +268,60 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             )}
 
             <style>{`
-                .manager-dashboard {
-                    padding: 1.5rem;
-                    max-width: 1400px;
-                    margin: 0 auto;
-                }
-                .dashboard-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 1.5rem;
-                }
-                .header-left {
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                }
-                .header-left h1 {
-                    margin: 0;
-                    font-size: 1.5rem;
-                    color: #1e293b;
-                }
-                .metrics-row {
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 1rem;
-                    margin-bottom: 1.5rem;
-                }
-                .metric-card {
-                    background: white;
-                    border-radius: 12px;
-                    padding: 1.25rem;
-                    text-align: center;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    border: 1px solid #e2e8f0;
-                }
-                .metric-card.highlight {
-                    background: linear-gradient(135deg, #e0f2fe, #bae6fd);
-                    border-color: #7dd3fc;
-                }
-                .metric-card.alert {
-                    background: linear-gradient(135deg, #fef3c7, #fde68a);
-                    border-color: #fcd34d;
-                }
-                .metric-value {
-                    display: block;
-                    font-size: 1.75rem;
-                    font-weight: 700;
-                    color: #1e293b;
-                }
-                .metric-label {
-                    font-size: 0.85rem;
-                    color: #64748b;
-                }
-                .dashboard-grid {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 1.5rem;
-                    margin-bottom: 1.5rem;
-                }
-                .panel {
-                    background: white;
-                    border-radius: 12px;
-                    padding: 1rem;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    border: 1px solid #e2e8f0;
-                }
-                .panel h3 {
-                    margin: 0 0 1rem 0;
-                    font-size: 1rem;
-                    color: #1e293b;
-                }
-                .rep-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.5rem;
-                }
-                .rep-row {
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                    padding: 0.5rem;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    transition: background 0.15s;
-                }
-                .rep-row:hover {
-                    background: #f1f5f9;
-                }
-                .rep-row.selected {
-                    background: #e0f2fe;
-                }
-                .rep-info {
-                    display: flex;
-                    flex-direction: column;
-                    min-width: 120px;
-                }
-                .rep-name {
-                    font-weight: 500;
-                    color: #1e293b;
-                    font-size: 0.9rem;
-                }
-                .rep-total {
-                    font-size: 0.75rem;
-                    color: #64748b;
-                }
-                .rep-bars {
-                    flex: 1;
-                    display: flex;
-                    height: 12px;
-                    background: #e2e8f0;
-                    border-radius: 6px;
-                    overflow: hidden;
-                }
-                .bar {
-                    height: 100%;
-                }
-                .bar.new { background: #3b82f6; }
-                .bar.process { background: #f59e0b; }
-                .bar.closing { background: #22c55e; }
-                .bar-legend {
-                    display: flex;
-                    gap: 1rem;
-                    margin-top: 0.75rem;
-                    font-size: 0.75rem;
-                    color: #64748b;
-                }
-                .dot {
-                    display: inline-block;
-                    width: 8px;
-                    height: 8px;
-                    border-radius: 50%;
-                    margin-right: 4px;
-                }
-                .dot.new { background: #3b82f6; }
-                .dot.process { background: #f59e0b; }
-                .dot.closing { background: #22c55e; }
-                .stale-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.5rem;
-                    max-height: 250px;
-                    overflow-y: auto;
-                }
-                .stale-item {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 0.5rem;
-                    background: #fef3c7;
-                    border-radius: 6px;
-                    border-left: 3px solid #f59e0b;
-                }
-                .stale-info {
-                    display: flex;
-                    flex-direction: column;
-                    cursor: pointer;
-                }
-                .stale-company {
-                    font-weight: 500;
-                    color: #1e293b;
-                    font-size: 0.9rem;
-                }
-                .stale-owner {
-                    font-size: 0.75rem;
-                    color: #64748b;
-                }
-                .stale-date {
-                    font-size: 0.75rem;
-                    color: #92400e;
-                }
-                .empty-state {
-                    text-align: center;
-                    color: #64748b;
-                    padding: 2rem;
-                }
-                .rep-leads-panel {
-                    grid-column: 1 / -1;
-                }
-                .leads-table {
-                    display: flex;
-                    flex-direction: column;
-                    font-size: 0.85rem;
-                }
-                .table-header {
-                    display: grid;
-                    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
-                    gap: 1rem;
-                    padding: 0.5rem;
-                    background: #f1f5f9;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    color: #475569;
-                }
-                .table-row {
-                    display: grid;
-                    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
-                    gap: 1rem;
-                    padding: 0.5rem;
-                    border-bottom: 1px solid #e2e8f0;
-                    align-items: center;
-                }
-                .company-cell {
-                    color: #3b82f6;
-                    cursor: pointer;
-                }
-                .company-cell:hover {
-                    text-decoration: underline;
-                }
-                .actions-cell {
-                    display: flex;
-                    gap: 0.25rem;
-                }
-                .reassign-form {
-                    display: flex;
-                    gap: 0.25rem;
-                    align-items: center;
-                }
-                .reassign-form select {
-                    padding: 0.25rem;
-                    font-size: 0.75rem;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 4px;
-                }
-                .reassign-form button {
-                    padding: 0.2rem 0.4rem;
-                    font-size: 0.75rem;
-                    border: none;
-                    background: #e2e8f0;
-                    border-radius: 4px;
-                    cursor: pointer;
-                }
-                .btn-text {
-                    background: none;
-                    border: none;
-                    color: #3b82f6;
-                    cursor: pointer;
-                    font-size: 0.8rem;
-                }
-                .btn-text:hover {
-                    text-decoration: underline;
-                }
+                .grid { display: grid; }
+                .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+                .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+                .grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+                .col-span-2 { grid-column: span 2; }
+                .gap-6 { gap: 1.5rem; }
+                .gap-4 { gap: 1rem; }
+                .gap-2 { gap: 0.5rem; }
+                .flex { display: flex; }
+                .flex-col { flex-direction: column; }
+                .justify-between { justify-content: space-between; }
+                .items-center { align-items: center; }
+                .flex-1 { flex: 1; }
+                .p-6 { padding: 1.5rem; }
+                .p-3 { padding: 0.75rem; }
+                .p-2 { padding: 0.5rem; }
+                .p-8 { padding: 2rem; }
+                .mb-8 { margin-bottom: 2rem; }
+                .mb-4 { margin-bottom: 1rem; }
+                .mt-1 { margin-top: 0.25rem; }
+                .mt-4 { margin-top: 1rem; }
+                .w-full { width: 100%; }
+                .min-w-\[120px\] { min-width: 120px; }
+                .h-3 { height: 0.75rem; }
+                .h-full { height: 100%; }
+                .rounded-lg { border-radius: 0.5rem; }
+                .rounded-full { border-radius: 9999px; }
+                .bg-blue-50 { background-color: #eff6ff; }
+                .border-blue-200 { border-color: #bfdbfe; }
+                .text-blue-700 { color: #1d4ed8; }
+                .text-blue-600 { color: #2563eb; }
+                .bg-blue-500 { background-color: #3b82f6; }
+                .bg-amber-50 { background-color: #fffbeb; }
+                .border-amber-200 { border-color: #fde68a; }
+                .text-amber-700 { color: #b45309; }
+                .text-amber-800 { color: #92400e; }
+                .text-amber-600 { color: #d97706; }
+                .bg-amber-500 { background-color: #f59e0b; }
+                .bg-emerald-500 { background-color: #10b981; }
+                .font-bold { font-weight: 700; }
+                .font-medium { font-weight: 500; }
+                .text-3xl { font-size: 1.875rem; }
+                .uppercase { text-transform: uppercase; }
+                .tracking-wider { letter-spacing: 0.05em; }
+                .overflow-hidden { overflow: hidden; }
+                .cursor-pointer { cursor: pointer; }
+                .hover\:bg-slate-50:hover { background-color: #f8fafc; }
+                .bg-white { background-color: white; }
+                .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+                .absolute { position: absolute; }
+                .z-10 { z-index: 10; }
+                .border { border: 1px solid #e2e8f0; }
+                .max-h-\[300px\] { max-height: 300px; }
+                .overflow-y-auto { overflow-y: auto; }
             `}</style>
         </div>
     );

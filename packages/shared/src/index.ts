@@ -41,7 +41,10 @@ export type DocumentType =
     | 'accounts_receivable'
     | 'accounts_payable'
     | 'equipment_list'
-    | 'other';
+    | 'other'
+    | 'sba_form_1244'
+    | 'credit_report';
+
 
 export interface Document {
     id: string;
@@ -50,6 +53,7 @@ export interface Document {
     status: 'needed' | 'requested' | 'received' | 'ordered' | 'waived' | 'na';
     requestedDate?: string;
     receivedDate?: string;
+    documentDate?: string; // New field for expiration tracking
     notes?: string;
     // ShareFile-ready fields
     fileUrl?: string;
@@ -172,6 +176,9 @@ export interface Lead {
     closingDate?: string;
     fundingDate?: string;
 
+    // E-Tran Integration
+    etranAppId?: string;
+
     // Visibility / Permissions
     assignedTo?: string; // User ID of assigned LO
     visibility?: 'private' | 'team' | 'global';
@@ -284,6 +291,7 @@ export const DOC_TYPE_LABELS: Record<DocumentType, string> = {
     'accounts_receivable': 'Accounts Receivable Aging',
     'accounts_payable': 'Accounts Payable Aging',
     'equipment_list': 'Equipment List',
-    'other': 'Other'
+    'other': 'Other',
+    'sba_form_1244': 'SBA Form 1244 (Application)',
+    'credit_report': 'Credit Report'
 };
-

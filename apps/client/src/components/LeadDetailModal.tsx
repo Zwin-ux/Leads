@@ -6,6 +6,8 @@ import { DocumentChecklist } from './DocumentChecklist';
 import { BankPartnerPanel } from './BankPartnerPanel';
 import { ClosingChecklist } from './ClosingChecklist';
 import { SBAEligibilityScanner } from './SBAEligibilityScanner';
+import { EmailAction } from './EmailAction';
+import { graphService, type EmailThread } from '../services/graphService';
 
 interface LeadDetailModalProps {
     lead: Lead;
@@ -15,7 +17,7 @@ interface LeadDetailModalProps {
 }
 
 const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate, onDelete }) => {
-    const [activeTab, setActiveTab] = useState<'snapshot' | 'documents' | 'qualification' | 'notes' | 'closing' | 'partners' | 'contacts' | 'research'>('snapshot');
+    const [activeTab, setActiveTab] = useState<'snapshot' | 'documents' | 'qualification' | 'notes' | 'closing' | 'partners' | 'contacts' | 'research' | 'activity'>('snapshot');
     const [noteContent, setNoteContent] = useState('');
     const [noteContext, setNoteContext] = useState<'Call' | 'Email' | 'Meeting' | 'Manual'>('Manual');
     const [aiEmail, setAiEmail] = useState('');
@@ -38,6 +40,28 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
     const [showAddContact, setShowAddContact] = useState(false);
     const [editingContact, setEditingContact] = useState<Contact | null>(null);
     const [newContact, setNewContact] = useState<Partial<Contact>>({});
+
+    // Activity/Email State
+    const [emails, setEmails] = useState<EmailThread[]>([]);
+    const [loadingEmails, setLoadingEmails] = useState(false);
+
+    useEffect(() => {
+        if (activeTab === 'activity') {
+            loadEmails();
+        }
+    }, [activeTab]);
+
+    const loadEmails = async () => {
+        setLoadingEmails(true);
+        try {
+            const data = await graphService.getEmailsForLead(lead);
+            setEmails(data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoadingEmails(false);
+        }
+    };
 
     useEffect(() => {
         // Ensure contacts are synced if lead updates
@@ -326,13 +350,32 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                     <button className={activeTab === 'closing' ? 'active' : ''} onClick={() => setActiveTab('closing')}>Closing</button>
                     <button className={activeTab === 'partners' ? 'active' : ''} onClick={() => setActiveTab('partners')}>Bank Partners</button>
                     <button className={activeTab === 'contacts' ? 'active' : ''} onClick={() => setActiveTab('contacts')}>Contacts ({contacts.length})</button>
+                    <button className={activeTab === 'activity' ? 'active' : ''} onClick={() => setActiveTab('activity')}>Activity</button>
                     <button className={activeTab === 'research' ? 'active' : ''} onClick={() => setActiveTab('research')}>AI</button>
                 </div>
 
                 <div className="modal-body">
                     {activeTab === 'snapshot' && (
                         <div className="snapshot-view">
-                            <div className="snapshot-header" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                            <div className="snapshot-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <EmailAction
+                                        to={lead.email}
+                                        subject={`SBA 504 Loan Options for ${lead.company || lead.businessName}`}
+                                        body={`Hi ${lead.firstName},\n\nI reviewed your business profile and believe you might be a great fit for the SBA 504 loan program. Do you have 10 minutes to chat?\n\nBest,\nAmPac Team`}
+                                        label="Intro Email"
+                                        variant="secondary"
+                                        icon="👋"
+                                    />
+                                    <EmailAction
+                                        to={lead.email}
+                                        subject={`Following up: SBA 504 Loan for ${lead.company || lead.businessName}`}
+                                        body={`Hi ${lead.firstName},\n\nJust checking back on my previous note. Are you still interested in discussing financing options?\n\nBest,\nAmPac Team`}
+                                        label="Follow Up"
+                                        variant="secondary"
+                                        icon="eye" // using simpler icon
+                                    />
+                                </div>
                                 {isEditingSnapshot ? (
                                     <div className="edit-actions">
                                         <button className="btn-text" onClick={() => setIsEditingSnapshot(false)}>Cancel</button>
@@ -646,6 +689,57 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                     onUpdate({ ...lead, bankPartners: partners.filter(p => p.bankerId !== bankerId) });
                                 }}
                             />
+                        </div>
+                    )}
+
+                    {activeTab === 'activity' && (
+                        <div className="activity-view">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3>Email Activity (Sync: Outlook)</h3>
+                                <button className="btn-secondary text-sm" onClick={loadEmails}>🔄 Refresh</button>
+                            </div>
+
+                            {loadingEmails ? (
+                                <div className="p-8 text-center text-muted">Thinking (Graph API)...</div>
+                            ) : (
+                                <div className="activity-list flex flex-col gap-4">
+                                    {emails.length === 0 ? (
+                                        <div className="p-8 text-center text-muted border rounded-lg border-dashed">
+                                            No recent emails found in M365.
+                                        </div>
+                                    ) : (
+                                        emails.map(email => (
+                                            <div key={email.id} className="email-card border rounded-lg p-4 bg-white hover:shadow-sm transition-shadow">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <span className="font-semibold text-slate-800">{email.subject}</span>
+                                                        <div className="text-xs text-muted mt-1">
+                                                            {email.from === lead.email ? '↙️ Received' : '↗️ Sent'} • {new Date(email.date).toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                    {email.hasAttachments && <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">📎 Attachment</span>}
+                                                </div>
+                                                <p className="text-sm text-slate-600 line-clamp-2">{email.preview}</p>
+                                                <div className="mt-3 flex gap-2">
+                                                    <button className="btn-text text-xs">Reply</button>
+                                                    <button className="btn-text text-xs">View Thread</button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Alert for Simulation */}
+                            <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3 items-start">
+                                <span className="text-xl">ℹ️</span>
+                                <div>
+                                    <h5 className="font-semibold text-amber-800 text-sm m-0">Integration Mode</h5>
+                                    <p className="text-amber-700 text-xs mt-1 m-0">
+                                        This view is currently simulating the Microsoft Graph API connection. In production, this would use OAuth2 to fetch real emails from <code>{lead.email}</code>.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     )}
 
