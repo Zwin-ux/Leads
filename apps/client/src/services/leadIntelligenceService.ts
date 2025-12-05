@@ -131,17 +131,20 @@ async function searchViaBackend(query: string, location: string): Promise<RawBus
 // =====================================================
 // GOOGLE PLACES API (direct, may have CORS issues)
 // =====================================================
+// =====================================================
+// GOOGLE PLACES API (via Backend Proxy)
+// =====================================================
 async function searchGooglePlaces(query: string, location: string): Promise<RawBusinessResult[]> {
-    if (!GOOGLE_PLACES_API_KEY) return [];
-
     try {
-        // Use Text Search API for business queries
         const searchQuery = `${query} in ${location}`;
-        const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${GOOGLE_PLACES_API_KEY}`;
+        const url = `${BACKEND_API_URL}/api/search/google?query=${encodeURIComponent(searchQuery)}`;
+
+        console.log('🔍 Searching Google via proxy:', url);
 
         const response = await fetch(url);
+
         if (!response.ok) {
-            console.error('Google Places API error:', response.status);
+            console.error('Google Proxy search error:', response.status);
             return [];
         }
 
@@ -158,15 +161,15 @@ async function searchGooglePlaces(query: string, location: string): Promise<RawB
             address: place.formatted_address,
             city: extractCity(place.formatted_address),
             state: extractState(place.formatted_address),
-            phone: undefined,  // Requires Place Details API call
-            website: undefined, // Requires Place Details API call
+            phone: undefined,
+            website: undefined,
             rating: place.rating,
             reviewCount: place.user_ratings_total,
             categories: place.types || [],
             placeId: place.place_id
         }));
     } catch (e) {
-        console.error('Google Places search failed:', e);
+        console.error('Google Places proxy search failed:', e);
         return [];
     }
 }
@@ -405,18 +408,11 @@ export async function searchLeads(
     const usedSources: DataSource[] = [];
     const rawResults: RawBusinessResult[] = [];
 
-    // 1. Discovery (Google Places)
+    // 1. Discovery (Google Places via Proxy)
     try {
-        const googleResults = await searchViaBackend(query, location);
-        // If backend fails/empty and we have key, try direct
-        if (googleResults.length === 0 && GOOGLE_PLACES_API_KEY) {
-            const directResults = await searchGooglePlaces(query, location);
-            rawResults.push(...directResults);
-            if (directResults.length > 0) usedSources.push('google_places');
-        } else {
-            rawResults.push(...googleResults);
-            if (googleResults.length > 0) usedSources.push('google_places');
-        }
+        const googleResults = await searchGooglePlaces(query, location);
+        rawResults.push(...googleResults);
+        if (googleResults.length > 0) usedSources.push('google_places');
     } catch (e) {
         console.error('Discovery failed', e);
     }

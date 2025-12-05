@@ -7,8 +7,68 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Enable CORS for all origins
-app.use(cors());
+// Enable CORS
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://leads-production-e11a.up.railway.app'
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
+
 app.use(express.json());
+
+// Google Places Proxy
+app.get('/api/search/google', async (req, res) => {
+    const { query, type } = req.query;
+    const apiKey = process.env.GOOGLE_MAPS_KEY || process.env.VITE_GOOGLE_MAPS_KEY;
+
+    if (!apiKey) return res.status(500).json({ error: 'Google API key not configured' });
+
+    try {
+        const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error('[GoogleMaps] Failed:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// In-Memory Leads Store (for production demo resilience)
+let leadsStore = [];
+
+app.get('/api/leads', (req, res) => {
+    res.json(leadsStore);
+});
+
+app.post('/api/leads', (req, res) => {
+    const lead = req.body;
+    leadsStore.push(lead);
+    res.json(lead);
+});
+
+app.put('/api/leads', (req, res) => {
+    const updatedLead = req.body;
+    leadsStore = leadsStore.map(l => l.id === updatedLead.id ? updatedLead : l);
+    res.json(updatedLead);
+});
+
+app.delete('/api/leads/:id', (req, res) => {
+    const { id } = req.params;
+    leadsStore = leadsStore.filter(l => l.id !== id);
+    res.json({ success: true });
+});
 
 // Health check
 app.get('/health', (req, res) => {
