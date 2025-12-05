@@ -166,12 +166,42 @@ export interface Lead {
     // Bank Partners on this deal (LO Feature)
     bankPartners?: BankPartnerDeal[];
 
+    // Closing Checklist (Processor Feature)
+    closingItems?: ClosingItem[];
+    postCloseItems?: PostCloseItem[];
+    closingDate?: string;
+    fundingDate?: string;
+
     // Visibility / Permissions
     assignedTo?: string; // User ID of assigned LO
     visibility?: 'private' | 'team' | 'global';
     createdBy?: string;
     createdAt?: string;
     updatedAt?: string;
+}
+
+// Closing checklist item (Processor workflow)
+export interface ClosingItem {
+    id: string;
+    category: 'pre_closing' | 'closing_day' | 'post_closing';
+    label: string;
+    status: 'pending' | 'in_progress' | 'complete' | 'na';
+    dueDate?: string;
+    completedDate?: string;
+    assignedTo?: string;
+    thirdParty?: string; // Title company, escrow, etc.
+    thirdPartyContact?: string;
+    notes?: string;
+}
+
+// Post-close tracking item
+export interface PostCloseItem {
+    id: string;
+    label: string;
+    status: 'pending' | 'received' | 'filed' | 'na';
+    dueDate?: string;
+    completedDate?: string;
+    notes?: string;
 }
 
 export interface Contact {

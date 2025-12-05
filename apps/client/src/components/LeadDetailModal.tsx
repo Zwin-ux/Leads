@@ -4,6 +4,7 @@ import { apiService } from '../services/apiService';
 import TransferLeadModal from './TransferLeadModal';
 import { DocumentChecklist } from './DocumentChecklist';
 import { BankPartnerPanel } from './BankPartnerPanel';
+import { ClosingChecklist } from './ClosingChecklist';
 
 interface LeadDetailModalProps {
     lead: Lead;
@@ -13,7 +14,7 @@ interface LeadDetailModalProps {
 }
 
 const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate, onDelete }) => {
-    const [activeTab, setActiveTab] = useState<'snapshot' | 'documents' | 'notes' | 'partners' | 'contacts' | 'research'>('snapshot');
+    const [activeTab, setActiveTab] = useState<'snapshot' | 'documents' | 'notes' | 'closing' | 'partners' | 'contacts' | 'research'>('snapshot');
     const [noteContent, setNoteContent] = useState('');
     const [noteContext, setNoteContext] = useState<'Call' | 'Email' | 'Meeting' | 'Manual'>('Manual');
     const [aiEmail, setAiEmail] = useState('');
@@ -320,6 +321,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                     <button className={activeTab === 'snapshot' ? 'active' : ''} onClick={() => setActiveTab('snapshot')}>Deal Info</button>
                     <button className={activeTab === 'documents' ? 'active' : ''} onClick={() => setActiveTab('documents')}>Documents</button>
                     <button className={activeTab === 'notes' ? 'active' : ''} onClick={() => setActiveTab('notes')}>Notes</button>
+                    <button className={activeTab === 'closing' ? 'active' : ''} onClick={() => setActiveTab('closing')}>Closing</button>
                     <button className={activeTab === 'partners' ? 'active' : ''} onClick={() => setActiveTab('partners')}>Bank Partners</button>
                     <button className={activeTab === 'contacts' ? 'active' : ''} onClick={() => setActiveTab('contacts')}>Contacts ({contacts.length})</button>
                     <button className={activeTab === 'research' ? 'active' : ''} onClick={() => setActiveTab('research')}>AI</button>
@@ -520,6 +522,53 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                                 onRequestDocs={(_docTypes) => {
                                     const sendNowUrl = 'https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/r1';
                                     window.open(sendNowUrl, '_blank');
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    {activeTab === 'closing' && (
+                        <div className="closing-view">
+                            <ClosingChecklist
+                                lead={lead}
+                                onUpdateClosingItem={(itemId, updates) => {
+                                    const items = lead.closingItems || [];
+                                    const existingIndex = items.findIndex(i => i.id === itemId);
+                                    let newItems;
+                                    if (existingIndex >= 0) {
+                                        newItems = items.map(i => i.id === itemId ? { ...i, ...updates } : i);
+                                    } else {
+                                        // Initialize with default items if not present
+                                        const DEFAULT_ITEMS = [
+                                            { id: 'closing-0', category: 'pre_closing' as const, label: 'Title Commitment Ordered', status: 'pending' as const },
+                                            { id: 'closing-1', category: 'pre_closing' as const, label: 'Title Commitment Received', status: 'pending' as const },
+                                            { id: 'closing-2', category: 'pre_closing' as const, label: 'Title Cleared', status: 'pending' as const },
+                                            { id: 'closing-3', category: 'pre_closing' as const, label: 'Appraisal Ordered', status: 'pending' as const },
+                                            { id: 'closing-4', category: 'pre_closing' as const, label: 'Appraisal Received', status: 'pending' as const },
+                                            { id: 'closing-5', category: 'pre_closing' as const, label: 'Appraisal Reviewed', status: 'pending' as const },
+                                            { id: 'closing-6', category: 'pre_closing' as const, label: 'Insurance Quote Received', status: 'pending' as const },
+                                            { id: 'closing-7', category: 'pre_closing' as const, label: 'Insurance Binder Ordered', status: 'pending' as const },
+                                            { id: 'closing-8', category: 'pre_closing' as const, label: 'Closing Docs Drafted', status: 'pending' as const },
+                                            { id: 'closing-9', category: 'pre_closing' as const, label: 'Closing Docs to Parties', status: 'pending' as const },
+                                            { id: 'closing-10', category: 'closing_day' as const, label: 'Wire Instructions Received', status: 'pending' as const },
+                                            { id: 'closing-11', category: 'closing_day' as const, label: 'Signing Scheduled', status: 'pending' as const },
+                                            { id: 'closing-12', category: 'closing_day' as const, label: 'Signing Complete', status: 'pending' as const },
+                                            { id: 'closing-13', category: 'closing_day' as const, label: 'Recording Submitted', status: 'pending' as const },
+                                            { id: 'closing-14', category: 'closing_day' as const, label: 'Recording Confirmed', status: 'pending' as const },
+                                            { id: 'closing-15', category: 'closing_day' as const, label: 'Funding Wire Sent', status: 'pending' as const },
+                                            { id: 'closing-16', category: 'closing_day' as const, label: 'Funding Confirmed', status: 'pending' as const },
+                                            { id: 'closing-17', category: 'post_closing' as const, label: 'Recorded Deed Received', status: 'pending' as const },
+                                            { id: 'closing-18', category: 'post_closing' as const, label: 'Final Title Policy', status: 'pending' as const },
+                                            { id: 'closing-19', category: 'post_closing' as const, label: 'Insurance Binder Filed', status: 'pending' as const },
+                                            { id: 'closing-20', category: 'post_closing' as const, label: 'SBA Form 1502 Filed', status: 'pending' as const },
+                                            { id: 'closing-21', category: 'post_closing' as const, label: 'File Audit Complete', status: 'pending' as const },
+                                        ];
+                                        newItems = DEFAULT_ITEMS.map(i => i.id === itemId ? { ...i, ...updates } : i);
+                                    }
+                                    onUpdate({ ...lead, closingItems: newItems });
+                                }}
+                                onUpdateLead={(updates) => {
+                                    onUpdate({ ...lead, ...updates });
                                 }}
                             />
                         </div>

@@ -11,6 +11,7 @@ import logo from '../assets/ampac-logo-v2.png';
 import { LeadGenerator } from './LeadGenerator';
 import TransferLeadModal from './TransferLeadModal';
 import { BankerRolodex } from './BankerRolodex';
+import { ManagerDashboard } from './ManagerDashboard';
 
 const LeadList: React.FC = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -19,7 +20,7 @@ const LeadList: React.FC = () => {
     const [showImport, setShowImport] = useState(false);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [leadToTransfer, setLeadToTransfer] = useState<Lead | null>(null);
-    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator' | 'bankers'>('list');
+    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator' | 'bankers' | 'dashboard'>('list');
     const [selectedOwner, setSelectedOwner] = useState<string>('All');
 
     // Email preview state
@@ -238,6 +239,31 @@ const LeadList: React.FC = () => {
         );
     }
 
+    if (viewMode === 'dashboard') {
+        const handleReassignLead = async (leadId: string, newOwner: string) => {
+            const leadToUpdate = leads.find(l => l.id === leadId);
+            if (!leadToUpdate) return;
+
+            const updated = { ...leadToUpdate, owner: newOwner, updatedAt: new Date().toISOString() };
+            setLeads(leads.map(l => l.id === leadId ? updated : l));
+
+            try {
+                await apiService.updateLead(updated);
+            } catch (err) {
+                console.error('Failed to reassign lead:', err);
+            }
+        };
+
+        return (
+            <ManagerDashboard
+                leads={leads}
+                onReassignLead={handleReassignLead}
+                onSelectLead={(lead) => setSelectedLead(lead)}
+                onBack={() => setViewMode('list')}
+            />
+        );
+    }
+
     return (
         <div className="lead-list">
             <div className="header">
@@ -264,6 +290,14 @@ const LeadList: React.FC = () => {
                             <option key={m.email} value={m.name}>{m.name}</option>
                         ))}
                     </select>
+
+                    <button
+                        className="btn-secondary"
+                        onClick={() => setViewMode('dashboard')}
+                        style={{ marginRight: '0.5rem', background: '#f0fdf4', color: '#166534', border: '1px solid #86efac' }}
+                    >
+                        <span className="icon">📊</span> Dashboard
+                    </button>
 
                     <button
                         className="btn-secondary"
