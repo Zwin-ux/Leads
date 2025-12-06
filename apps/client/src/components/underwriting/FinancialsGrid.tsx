@@ -1,5 +1,5 @@
 import React from 'react';
-import { Financials } from '../../services/underwritingService';
+import type { Financials } from '../../services/underwritingService';
 
 interface FinancialsGridProps {
     financials: Financials;

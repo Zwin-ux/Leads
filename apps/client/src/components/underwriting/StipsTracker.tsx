@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stipulation } from '../../services/underwritingService';
+import type { Stipulation } from '../../services/underwritingService';
 
 interface StipsTrackerProps {
     stips: Stipulation[];

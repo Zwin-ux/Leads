@@ -1,4 +1,4 @@
-import { Lead } from "@leads/shared";
+
 
 export interface Task {
     id: string;

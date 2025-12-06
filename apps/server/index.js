@@ -7,7 +7,6 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Enable CORS for all origins
-// Enable CORS
 const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
@@ -137,6 +136,29 @@ app.post('/api/ai/enrich', async (req, res) => {
     } catch (error) {
         console.error('[OpenAI] Failed:', error.message);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// SEC Proxy
+app.get('/api/sec/submissions/:cik', async (req, res) => {
+    const { cik } = req.params;
+    try {
+        const response = await fetch(`https://data.sec.gov/submissions/CIK${cik}.json`, {
+            headers: {
+                'User-Agent': 'AmPac Capital underwriting@ampaccapital.com', // Required by SEC
+                'Accept-Encoding': 'gzip, deflate',
+                'Host': 'data.sec.gov'
+            }
+        });
+
+        if (!response.ok) {
+            return res.status(response.status).json({ error: 'SEC API Error' });
+        }
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error('SEC Proxy Error:', error);
+        res.status(500).json({ error: 'Proxy Request Failed' });
     }
 });
 

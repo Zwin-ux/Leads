@@ -184,7 +184,7 @@ export const BDODashboard: React.FC<BDODashboardProps> = ({ leads, onUpdateLead,
                     ) : (
                         <DealTable
                             leads={bdoLeads}
-                            onRowClick={(lead) => { /* Open Drawer in future */ }}
+                            onRowClick={() => { /* Open Drawer in future */ }}
                         />
                     )}
                 </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Task } from '../../services/crmService';
+import type { Task } from '../../services/crmService';
 
 interface TaskItemProps {
     task: Task;

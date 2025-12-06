@@ -3,6 +3,8 @@ import type { Lead } from '@leads/shared';
 import { FinancialsGrid } from './FinancialsGrid';
 import { StipsTracker } from './StipsTracker';
 import { LocationCheck } from './LocationCheck';
+import { CaEntityCheck } from './CaEntityCheck';
+import { DealEnrichmentCard } from '../DealEnrichmentCard';
 import { SBAEligibilityScanner } from '../SBAEligibilityScanner';
 import { underwritingService, type UnderwritingAnalysis } from '../../services/underwritingService';
 
@@ -15,7 +17,7 @@ interface DealWorkspaceProps {
 
 export const DealWorkspace: React.FC<DealWorkspaceProps> = ({ lead, onClose }) => {
     const [analysis, setAnalysis] = useState<UnderwritingAnalysis | null>(null);
-    const [activeTab, setActiveTab] = useState<'financials' | 'stips' | 'sba' | 'memo'>('financials');
+    const [activeTab, setActiveTab] = useState<'financials' | 'stips' | 'sba' | 'memo' | 'diligence'>('financials');
     const [showScorecard, setShowScorecard] = useState(false);
 
     useEffect(() => {
@@ -62,7 +64,7 @@ Recommendation: [APPROVE / DECLINE]
 
 2. Financial Analysis
    DSCR: ${analysis.financials.dscr}x based on $${analysis.financials.noi.toLocaleString()} NOI.
-   Revenue: $${analysis.financials.revenue.toLocaleString()}
+   Revenue: ${analysis.financials.revenue.toLocaleString()}
 
 3. Risks & Mitigants
    - Risk: High leverage.
@@ -96,7 +98,9 @@ Recommendation: [APPROVE / DECLINE]
             </header>
 
             <div className="workspace-body" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                <div className="workspace-nav" style={{ width: '250px', borderRight: '1px solid #e2e8f0', background: '#f8fafc', padding: '1rem' }}>
+                <div className="workspace-nav" style={{ width: '320px', borderRight: '1px solid #e2e8f0', background: '#f8fafc', padding: '1rem', overflowY: 'auto' }}>
+                    <DealEnrichmentCard leadId={lead.id} />
+
                     <button
                         className={`nav-item ${activeTab === 'financials' ? 'active' : ''}`}
                         onClick={() => setActiveTab('financials')}
@@ -114,6 +118,12 @@ Recommendation: [APPROVE / DECLINE]
                         onClick={() => setActiveTab('sba')}
                     >
                         🏛️ SBA Eligibility
+                    </button>
+                    <button
+                        className={`nav-item ${activeTab === 'diligence' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('diligence')}
+                    >
+                        🔍 Due Diligence (CA SOS)
                     </button>
                     <button
                         className={`nav-item ${activeTab === 'memo' ? 'active' : ''}`}
@@ -139,6 +149,10 @@ Recommendation: [APPROVE / DECLINE]
 
                     {activeTab === 'sba' && (
                         <SBAEligibilityScanner lead={lead} onUpdateNote={() => { }} />
+                    )}
+
+                    {activeTab === 'diligence' && (
+                        <CaEntityCheck lead={lead} />
                     )}
 
                     {activeTab === 'memo' && (
@@ -208,9 +222,21 @@ Recommendation: [APPROVE / DECLINE]
                     font-weight: 500;
                     transition: all 0.2s;
                 }
-                .nav-item:hover { background: #e2e8f0; }
-                .nav-item.active { background: white; color: #0f766e; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+                .nav-item:hover {
+                    background: #e2e8f0;
+                    color: #1e293b;
+                }
+                .nav-item.active {
+                    background: #e2e8f0;
+                    color: #0f766e;
+                    font-weight: 700;
+                }
+                .nav-item.active::before {
+                    content: '►';
+                    margin-right: 0.5rem;
+                    font-size: 0.8rem;
+                }
             `}</style>
-        </div >
+        </div>
     );
 };

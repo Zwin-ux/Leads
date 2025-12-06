@@ -5,10 +5,10 @@ import { DealWorkspace } from './underwriting/DealWorkspace';
 
 interface UnderwriterDashboardProps {
     leads: Lead[];
-    onUpdateLead: (lead: Lead) => void;
+    onUpdateLead?: (lead: Lead) => void;
 }
 
-export const UnderwriterDashboard: React.FC<UnderwriterDashboardProps> = ({ leads, onUpdateLead }) => {
+export const UnderwriterDashboard: React.FC<UnderwriterDashboardProps> = ({ leads }) => {
     const currentUser = authService.getCurrentUser();
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 

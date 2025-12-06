@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity } from '../../services/crmService';
+import type { Activity } from '../../services/crmService';
 
 interface ActivityFeedProps {
     activities: Activity[];

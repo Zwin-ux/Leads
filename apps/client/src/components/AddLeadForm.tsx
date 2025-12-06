@@ -1,19 +1,30 @@
 import React, { useState } from 'react';
 import type { Lead } from '@leads/shared';
-
 import { TEAM_MEMBERS } from '../services/authService';
+import { enrichmentService } from '../services/enrichmentService';
 
 const AddLeadForm: React.FC<{ onAdd: (lead: Lead) => void, onCancel: () => void }> = ({ onAdd, onCancel }) => {
     const [formData, setFormData] = useState<Partial<Lead>>({
         stage: 'New',
         dealStage: 'Prospect',
         loanProgram: '504',
-        owner: 'Unassigned'
+        owner: 'Unassigned',
+        stateOfInc: 'CA' // Default to CA for demo
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onAdd(formData as Lead);
+        // 1. Add Lead (Optimistic)
+        const newLead = { ...formData, id: crypto.randomUUID() } as Lead;
+        onAdd(newLead);
+
+        // 2. Trigger Enrichment in Background
+        try {
+            await enrichmentService.enrichIntake(newLead);
+            console.log("Enrichment complete for", newLead.company);
+        } catch (err) {
+            console.error("Enrichment failed", err);
+        }
     };
 
     return (
@@ -34,18 +45,21 @@ const AddLeadForm: React.FC<{ onAdd: (lead: Lead) => void, onCancel: () => void 
                 </select>
             </div>
 
-            <input
-                placeholder="First Name"
-                value={formData.firstName || ''}
-                onChange={e => setFormData({ ...formData, firstName: e.target.value })}
-                required
-            />
-            <input
-                placeholder="Last Name"
-                value={formData.lastName || ''}
-                onChange={e => setFormData({ ...formData, lastName: e.target.value })}
-                required
-            />
+            <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <input
+                    placeholder="First Name"
+                    value={formData.firstName || ''}
+                    onChange={e => setFormData({ ...formData, firstName: e.target.value })}
+                    required
+                />
+                <input
+                    placeholder="Last Name"
+                    value={formData.lastName || ''}
+                    onChange={e => setFormData({ ...formData, lastName: e.target.value })}
+                    required
+                />
+            </div>
+
             <input
                 placeholder="Email"
                 type="email"
@@ -57,26 +71,46 @@ const AddLeadForm: React.FC<{ onAdd: (lead: Lead) => void, onCancel: () => void 
                 placeholder="Company (Display Name)"
                 value={formData.company || ''}
                 onChange={e => setFormData({ ...formData, company: e.target.value })}
+                required
             />
             <input
                 placeholder="Legal Business Name"
                 value={formData.businessName || ''}
                 onChange={e => setFormData({ ...formData, businessName: e.target.value })}
             />
-            <div className="form-row" style={{ display: 'flex', gap: '1rem' }}>
+
+            <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
                 <input
-                    placeholder="Phone"
-                    value={formData.phone || ''}
-                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                    style={{ flex: 1 }}
+                    placeholder="Property Address (Street)"
+                    value={formData.propertyAddress || ''}
+                    onChange={e => setFormData({ ...formData, propertyAddress: e.target.value })}
                 />
+                <input
+                    placeholder="State (e.g. CA)"
+                    value={formData.stateOfInc || ''}
+                    onChange={e => setFormData({ ...formData, stateOfInc: e.target.value })}
+                    maxLength={2}
+                />
+            </div>
+
+            <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                 <input
                     placeholder="City"
                     value={formData.city || ''}
                     onChange={e => setFormData({ ...formData, city: e.target.value })}
-                    style={{ flex: 1 }}
+                />
+                <input
+                    placeholder="Phone"
+                    value={formData.phone || ''}
+                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                />
+                <input
+                    placeholder="NAICS Code"
+                    value={formData.naicsCode || ''}
+                    onChange={e => setFormData({ ...formData, naicsCode: e.target.value })}
                 />
             </div>
+
             <div className="form-row" style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                 <select
                     value={formData.loanProgram}
@@ -100,7 +134,7 @@ const AddLeadForm: React.FC<{ onAdd: (lead: Lead) => void, onCancel: () => void 
                 </select>
             </div>
             <div className="form-actions">
-                <button type="submit" className="primary">Save</button>
+                <button type="submit" className="primary">Save & Enrich</button>
                 <button type="button" className="secondary" onClick={onCancel}>Cancel</button>
             </div>
         </form>
