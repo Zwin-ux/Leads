@@ -1,4 +1,6 @@
 import { ocSearch } from './oc/ocClient';
+import { logger } from './loggerService';
+
 import { geoService } from './geoService';
 import { sbaStatsService } from './sbaStatsService';
 import { getSecSubmissions, getCikForTicker } from './sec/secClient';
@@ -62,7 +64,7 @@ class EnrichmentService {
 
     // THE ORCHESTRATOR
     async enrichIntake(lead: Lead): Promise<BusinessEntityEnriched> {
-        console.log(`[Enrichment] Starting for ${lead.company}`);
+        logger.info(`Enrichment starting`, { company: lead.company, leadId: lead.id });
         const store = this.getStore();
 
         // 1. Initialize Record
@@ -159,7 +161,7 @@ class EnrichmentService {
         store[lead.id] = record;
         this.saveStore(store);
 
-        console.log(`[Enrichment] Complete for ${lead.company}`, record);
+        logger.info(`Enrichment complete`, { company: lead.company, record });
         return record;
     }
 

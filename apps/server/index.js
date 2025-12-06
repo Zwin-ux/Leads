@@ -28,6 +28,37 @@ app.use(cors({
 
 app.use(express.json());
 
+// ---------------------------------------------------------
+// LOGGING MIDDLEWARE
+// ---------------------------------------------------------
+app.use((req, res, next) => {
+    const start = Date.now();
+    const requestId = Math.random().toString(36).substring(7);
+    req.id = requestId;
+
+    console.log(`[${new Date().toISOString()}] [REQ] [${requestId}] ${req.method} ${req.url} [Origin: ${req.headers.origin || 'None'}]`);
+
+    // Hook into response finish to log duration and status
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        const level = res.statusCode >= 400 ? 'ERROR' : 'INFO';
+        console.log(`[${new Date().toISOString()}] [${level}] [${requestId}] ${req.method} ${req.url} ${res.statusCode} (${duration}ms)`);
+    });
+
+    next();
+});
+
+// Helper for comprehensive error logging
+const logError = (context, error, req) => {
+    console.error(`[${new Date().toISOString()}] [ERROR] [${req?.id || 'SYSTEM'}] [${context}]`, {
+        message: error.message,
+        stack: error.stack,
+        url: req?.url,
+        body: req?.body,
+        query: req?.query
+    });
+};
+
 // Google Places Proxy
 app.get('/api/search/google', async (req, res) => {
     const { query, type } = req.query;
@@ -41,7 +72,7 @@ app.get('/api/search/google', async (req, res) => {
         const data = await response.json();
         res.json(data);
     } catch (error) {
-        console.error('[GoogleMaps] Failed:', error.message);
+        logError('GoogleMaps Failed', error, req);
         res.status(500).json({ error: error.message });
     }
 });
@@ -110,7 +141,7 @@ app.get('/api/search/businesses', async (req, res) => {
         console.log(`[SerpAPI] Found ${data.local_results?.length || 0} results`);
         res.json(data);
     } catch (error) {
-        console.error('[SerpAPI] Failed:', error.message);
+        logError('SerpAPI Failed', error, req);
         res.status(500).json({ error: error.message, local_results: [] });
     }
 });
@@ -136,7 +167,7 @@ app.post('/api/ai/enrich', async (req, res) => {
         const data = await response.json();
         res.json(data);
     } catch (error) {
-        console.error('[OpenAI] Failed:', error.message);
+        logError('OpenAI Failed', error, req);
         res.status(500).json({ error: error.message });
     }
 });
@@ -159,7 +190,7 @@ app.get('/api/sec/submissions/:cik', async (req, res) => {
         const data = await response.json();
         res.json(data);
     } catch (error) {
-        console.error('SEC Proxy Error:', error);
+        logError('SEC Proxy Error', error, req);
         res.status(500).json({ error: 'Proxy Request Failed' });
     }
 });
