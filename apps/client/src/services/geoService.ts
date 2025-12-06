@@ -10,7 +10,7 @@ export interface GeoResult {
 
 class GeoService {
     // Mock LMI Data
-    private async getLmiData(tract: string): Promise<{ isLmi: boolean, lmiPct: number }> {
+    private async getLmiData(_tract: string): Promise<{ isLmi: boolean, lmiPct: number }> {
         // Randomly assign LMI status for demo
         const pct = Math.floor(Math.random() * 100);
         return {

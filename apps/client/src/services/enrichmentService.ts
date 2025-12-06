@@ -132,7 +132,7 @@ class EnrichmentService {
         // 5. SEC / Public Markets (Phase 6)
         // Heuristic: Check if name looks like a public company or if ticker provided (no ticker field in Lead yet)
         // For now, check if name matches a known ticker in our simplified list
-        const likelyTicker = this.guessTicker(lead.company);
+        const likelyTicker = this.guessTicker(lead.company || '');
         if (likelyTicker) {
             const cik = getCikForTicker(likelyTicker);
             if (cik) {
