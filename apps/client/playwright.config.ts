@@ -8,14 +8,19 @@ export default defineConfig({
     workers: process.env.CI ? 1 : undefined,
     reporter: 'html',
     use: {
-        baseURL: 'https://localhost:4173',
+        baseURL: 'https://localhost:3000',
         ignoreHTTPSErrors: true,
         trace: 'on-first-retry',
     },
     projects: [
         {
             name: 'chromium',
-            use: { ...devices['Desktop Chrome'] },
+            use: {
+                ...devices['Desktop Chrome'],
+                launchOptions: {
+                    args: ['--ignore-certificate-errors']
+                }
+            },
         },
     ],
 });

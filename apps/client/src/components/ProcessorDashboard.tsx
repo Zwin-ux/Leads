@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import type { Lead } from '@leads/shared';
 import { authService } from '../services/authService';
 
+import { AccountingControl } from './processing/AccountingControl';
+
 interface ProcessorDashboardProps {
     leads: Lead[];
     onUpdateLead: (lead: Lead) => void;
@@ -10,6 +12,12 @@ interface ProcessorDashboardProps {
 export const ProcessorDashboard: React.FC<ProcessorDashboardProps> = ({ leads, onUpdateLead }) => {
     const currentUser = authService.getCurrentUser();
 
+    // Check for Accounting Role Access
+    const isAccountingUser = currentUser && (
+        currentUser.title.includes('Accountant') ||
+        currentUser.title.includes('Senior Loan Administrator') ||
+        currentUser.role === 'admin'
+    );
 
     // Filter for active deals relevant to processing
     const processingLeads = useMemo(() => {
@@ -51,6 +59,8 @@ export const ProcessorDashboard: React.FC<ProcessorDashboardProps> = ({ leads, o
                     Welcome back, {currentUser?.name.split(' ')[0]}. You have <strong>{processingLeads.length}</strong> active files.
                 </p>
             </div>
+
+            {isAccountingUser && <AccountingControl />}
 
             <div className="stats-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
                 <div className="stat-card" style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>

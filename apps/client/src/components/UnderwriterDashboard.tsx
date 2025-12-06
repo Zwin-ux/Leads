@@ -1,14 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { Lead } from '@leads/shared';
 import { authService } from '../services/authService';
+import { DealWorkspace } from './underwriting/DealWorkspace';
 
 interface UnderwriterDashboardProps {
     leads: Lead[];
     onUpdateLead: (lead: Lead) => void;
 }
 
-export const UnderwriterDashboard: React.FC<UnderwriterDashboardProps> = ({ leads }) => {
+export const UnderwriterDashboard: React.FC<UnderwriterDashboardProps> = ({ leads, onUpdateLead }) => {
     const currentUser = authService.getCurrentUser();
+    const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
     // Filter for deals in Underwriting
     const uwQueue = useMemo(() => {
@@ -21,9 +23,9 @@ export const UnderwriterDashboard: React.FC<UnderwriterDashboardProps> = ({ lead
         });
     }, [leads]);
 
-    const handleGenerateMemo = (lead: Lead) => {
-        alert(`📝 Generating Credit Memo for ${lead.company}...\n\nAI is analyzing financials and drafting the memo.`);
-    };
+    if (selectedLead) {
+        return <DealWorkspace lead={selectedLead} onClose={() => setSelectedLead(null)} />;
+    }
 
     return (
         <div className="underwriter-dashboard" style={{ padding: '2rem', background: '#f0fdfa', minHeight: '100vh' }}>
@@ -96,7 +98,7 @@ export const UnderwriterDashboard: React.FC<UnderwriterDashboardProps> = ({ lead
                                 </td>
                                 <td style={{ padding: '1rem', textAlign: 'right' }}>
                                     <button
-                                        onClick={() => handleGenerateMemo(lead)}
+                                        onClick={() => setSelectedLead(lead)}
                                         style={{
                                             padding: '0.5rem 1rem',
                                             background: '#0f766e',
@@ -112,7 +114,7 @@ export const UnderwriterDashboard: React.FC<UnderwriterDashboardProps> = ({ lead
                                             boxShadow: '0 2px 4px rgba(15, 118, 110, 0.2)'
                                         }}
                                     >
-                                        <span>📝</span> Credit Memo
+                                        <span>📝</span> Work Deal
                                     </button>
                                 </td>
                             </tr>
