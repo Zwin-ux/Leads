@@ -3,7 +3,7 @@ import { secFixtureApple } from "./secFixtures";
 
 // SEC Integration feature flag
 const SEC_ENABLED = import.meta.env.VITE_SEC_ENABLED === "true";
-const API_BASE = "http://localhost:3001/api/sec"; // Local proxy
+const API_BASE = "/api/sec"; // Local proxy
 
 export function isSecEnabled(): boolean {
     return SEC_ENABLED;

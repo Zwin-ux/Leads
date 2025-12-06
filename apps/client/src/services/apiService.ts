@@ -4,7 +4,7 @@ import { localStoreService } from "./localStoreService";
 import { authService } from "./authService";
 import { scoringService } from "./scoringService";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 const IS_DEMO = import.meta.env.VITE_DEMO_MODE === "true";
 
 export class ApiService {
