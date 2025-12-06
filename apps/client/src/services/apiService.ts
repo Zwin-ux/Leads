@@ -4,10 +4,14 @@ import { localStoreService } from "./localStoreService";
 import { authService } from "./authService";
 import { scoringService } from "./scoringService";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:7071/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 const IS_DEMO = import.meta.env.VITE_DEMO_MODE === "true";
 
 export class ApiService {
+    constructor() {
+        console.log("ApiService initialized with URL:", API_URL);
+    }
+
     async getLeads(): Promise<Lead[]> {
         if (IS_DEMO) {
             const user = authService.getCurrentUser();

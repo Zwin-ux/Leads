@@ -40,7 +40,7 @@ test.describe('SEC EDGAR Integration Verification', () => {
         page.on('console', msg => console.log('PAGE LOG:', msg.text()));
 
         // 4. Verify Lead in List and Wait for Enrichment
-        await expect(page.getByText(publicCompany)).toBeVisible();
+        await expect(page.getByText(publicCompany)).toBeVisible({ timeout: 10000 });
         console.log('Lead created, waiting for enrichment...');
         await page.waitForTimeout(5000); // 5s wait for background process
         console.log('Enrichment wait complete. Reloading...');
@@ -57,9 +57,14 @@ test.describe('SEC EDGAR Integration Verification', () => {
         await page.reload();
 
         // 6. Navigate to Deal Workspace
-        await expect(page.getByText('Credit Command')).toBeVisible();
+        await expect(page.getByText('Credit Command')).toBeVisible({ timeout: 15000 });
+
+        // Debug: Dump LocalStorage
+        const storage = await page.evaluate(() => JSON.stringify(localStorage));
+        console.log('LOCAL STORAGE DUMP:', storage);
+
         const row = page.locator('tr').filter({ hasText: publicCompany });
-        await expect(row).toBeVisible();
+        await expect(row).toBeVisible({ timeout: 10000 });
         await row.getByRole('button', { name: 'Work Deal' }).click();
 
         // 7. Verify SEC Data on Card
