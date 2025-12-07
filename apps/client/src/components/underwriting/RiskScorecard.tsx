@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import type { UnderwritingAnalysis } from '../../services/underwritingService';
+import type { RiskScorecardAI } from './DealWorkspace'; // Import from parent
 
 interface RiskScorecardProps {
     analysis: UnderwritingAnalysis;
+    aiResult?: RiskScorecardAI | null;
     onUpdate: (rating: number, strengths: string[], weaknesses: string[]) => void;
     onClose: () => void;
 }
 
-export const RiskScorecard: React.FC<RiskScorecardProps> = ({ analysis, onUpdate, onClose }) => {
+export const RiskScorecard: React.FC<RiskScorecardProps> = ({ analysis, aiResult, onUpdate, onClose }) => {
     const [rating, setRating] = useState(analysis.riskRating);
     const [strengths, setStrengths] = useState<string[]>(analysis.strengths);
     const [weaknesses, setWeaknesses] = useState<string[]>(analysis.weaknesses);
@@ -51,6 +53,25 @@ export const RiskScorecard: React.FC<RiskScorecardProps> = ({ analysis, onUpdate
                     <h2 style={{ margin: 0, color: '#1e293b' }}>Risk Rating Scorecard</h2>
                     <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
                 </div>
+
+                {/* AI INSIGHTS BLOCK */}
+                {aiResult && (
+                    <div className="ai-insights" style={{ marginBottom: '1.5rem', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1rem', borderRadius: '8px' }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', color: '#166534' }}>🤖 AI Financial Analysis</h4>
+                        <div style={{ fontSize: '0.9rem', color: '#14532d' }}>
+                            <div style={{ marginBottom: '0.5rem' }}>
+                                <strong>Cash Flow (DSCR {aiResult.ratios.dscr}x):</strong>
+                                <span style={{ marginLeft: '5px' }}>Score {aiResult.cashFlow.score}/5</span>
+                                <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>"{aiResult.cashFlow.reasoning}"</div>
+                            </div>
+                            <div>
+                                <strong>Collateral (LTV {aiResult.ratios.ltv}%):</strong>
+                                <span style={{ marginLeft: '5px' }}>Score {aiResult.collateral.score}/5</span>
+                                <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>"{aiResult.collateral.reasoning}"</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="rating-selector" style={{ marginBottom: '2rem', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.5rem' }}>OVERALL RISK RATING (1-10)</div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Lead } from '@leads/shared';
+import axios from 'axios';
 import { FinancialsGrid } from './FinancialsGrid';
 import { StipsTracker } from './StipsTracker';
 import { LocationCheck } from './LocationCheck';
@@ -9,6 +10,22 @@ import { SBAEligibilityScanner } from '../SBAEligibilityScanner';
 import { underwritingService, type UnderwritingAnalysis } from '../../services/underwritingService';
 
 import { RiskScorecard } from './RiskScorecard';
+
+// Types for AI Result (Mirrors Backend)
+interface ScoreReasoning {
+    score: 1 | 2 | 3 | 4 | 5;
+    confidence: 'high' | 'medium' | 'low';
+    reasoning: string;
+}
+export interface RiskScorecardAI {
+    character: ScoreReasoning;
+    cashFlow: ScoreReasoning;
+    collateral: ScoreReasoning;
+    ratios: {
+        dscr: number;
+        ltv: number;
+    };
+}
 
 interface DealWorkspaceProps {
     lead: Lead;
@@ -20,6 +37,9 @@ export const DealWorkspace: React.FC<DealWorkspaceProps> = ({ lead, onClose }) =
     const [activeTab, setActiveTab] = useState<'financials' | 'stips' | 'sba' | 'memo' | 'diligence'>('financials');
     const [showScorecard, setShowScorecard] = useState(false);
 
+    const [aiResult, setAiResult] = useState<RiskScorecardAI | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+
     useEffect(() => {
         setAnalysis(underwritingService.getAnalysis(lead.id));
     }, [lead.id]);
@@ -28,6 +48,47 @@ export const DealWorkspace: React.FC<DealWorkspaceProps> = ({ lead, onClose }) =
         if (!analysis) return;
         const updated = underwritingService.updateFinancials(lead.id, { [field]: val });
         setAnalysis({ ...updated });
+    };
+
+    const handleAutoCalc = async () => {
+        if (!analysis) return;
+        setIsAnalyzing(true);
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+            // Map analysis.financials to backend input
+            const payload = {
+                netIncome: analysis.financials.netIncome || 0,
+                depreciation: analysis.financials.depreciation || 0,
+                interestExpense: analysis.financials.interest || 0,
+                taxes: analysis.financials.taxes || 0,
+                amortization: analysis.financials.amortization || 0,
+                annualDebtService: analysis.financials.annualDebtService || 0,
+                loanAmount: lead.loanAmount || 0,
+                collateralValue: analysis.financials.collateralValue || 0 // Assuming this exists or using 0
+            };
+
+            console.log("Creating AI Analysis with payload:", payload);
+
+            const res = await axios.post(`${API_URL}/api/underwriting/financials`, payload);
+            const aiData = res.data as RiskScorecardAI;
+
+            setAiResult(aiData);
+
+            // Auto-update local ratios if they differ
+            if (aiData.ratios.dscr) {
+                const updated = underwritingService.updateFinancials(lead.id, { dscr: aiData.ratios.dscr });
+                setAnalysis({ ...updated });
+            }
+
+            alert(`Analysis Complete!\nDSCR: ${aiData.ratios.dscr}x\nReason: ${aiData.cashFlow.reasoning}`);
+
+        } catch (err: any) {
+            console.error("Auto-Calc Failed:", err);
+            alert("Failed to calculate ratios. Check API connection.");
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
     const handleStipUpdate = (id: string, status: any) => {
@@ -140,7 +201,19 @@ Recommendation: [APPROVE / DECLINE]
 
                 <div className="workspace-content" style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
                     {activeTab === 'financials' && (
-                        <FinancialsGrid financials={analysis.financials} onChange={handleFinancialChange} />
+                        <div>
+                            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                    className="btn-primary"
+                                    onClick={handleAutoCalc}
+                                    disabled={isAnalyzing}
+                                    style={{ background: isAnalyzing ? '#94a3b8' : '#2563eb' }}
+                                >
+                                    {isAnalyzing ? 'Analyzing...' : '✨ Auto-Calc Ratios'}
+                                </button>
+                            </div>
+                            <FinancialsGrid financials={analysis.financials} onChange={handleFinancialChange} />
+                        </div>
                     )}
 
                     {activeTab === 'stips' && (
@@ -202,6 +275,7 @@ Recommendation: [APPROVE / DECLINE]
             {showScorecard && (
                 <RiskScorecard
                     analysis={analysis}
+                    aiResult={aiResult}
                     onUpdate={handleRiskUpdate}
                     onClose={() => setShowScorecard(false)}
                 />

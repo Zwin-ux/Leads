@@ -2,9 +2,18 @@ export interface Financials {
     revenue: number;
     coqs: number;
     opex: number;
-    debtService: number;
+    debtService: number; // Legacy field?
     noi: number;
     dscr: number;
+
+    // Detailed Fields for AI Analyst
+    netIncome?: number;
+    depreciation?: number;
+    interest?: number;
+    taxes?: number;
+    amortization?: number;
+    annualDebtService?: number;
+    collateralValue?: number;
 }
 
 export interface Stipulation {
@@ -55,7 +64,10 @@ class UnderwritingService {
             // Initialize empty analysis
             this.analyses[leadId] = {
                 leadId,
-                financials: { revenue: 0, coqs: 0, opex: 0, debtService: 0, noi: 0, dscr: 0 },
+                financials: {
+                    revenue: 0, coqs: 0, opex: 0, debtService: 0, noi: 0, dscr: 0,
+                    netIncome: 0, depreciation: 0, interest: 0, taxes: 0, amortization: 0, annualDebtService: 0, collateralValue: 0
+                },
                 riskRating: 5,
                 strengths: ['Strong Management Experience'],
                 weaknesses: ['High Leverage'],
