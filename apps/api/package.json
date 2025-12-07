@@ -6,6 +6,7 @@
   "scripts": {
     "build": "npx prisma generate && rimraf dist && tsc",
     "start": "node dist/server.js",
+    "migrate": "npx prisma db push",
     "dev": "ts-node src/server.ts"
   },
   "dependencies": {
