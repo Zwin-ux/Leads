@@ -312,4 +312,11 @@ export interface AdRequest {
     length: 'Short' | 'Medium' | 'Long';
     salesPersonId?: string;
     notes?: string;
+    // New fields for specific lead targeting
+    targetBusiness?: {
+        name: string;
+        industry?: string;
+        city?: string;
+        state?: string;
+    };
 }

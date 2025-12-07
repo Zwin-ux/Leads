@@ -6,19 +6,21 @@ import type { AdRequest } from '@leads/shared';
 
 interface AdGeneratorProps {
     onBack: () => void;
+    initialData?: Partial<AdRequest>;
 }
 
-export const AdGenerator: React.FC<AdGeneratorProps> = ({ onBack }) => {
+export const AdGenerator: React.FC<AdGeneratorProps> = ({ onBack, initialData }) => {
     const [loading, setLoading] = useState(false);
     const [resultScript, setResultScript] = useState<any>(null);
 
     const [formData, setFormData] = useState<AdRequest>({
-        product: 'SBA 504 Loan',
-        goal: 'Drive applications',
-        tone: 'Professional but urgent',
-        length: 'Short',
-        salesPersonId: '',
-        notes: ''
+        product: initialData?.product || 'SBA 504 Loan',
+        goal: initialData?.goal || 'Drive applications',
+        tone: initialData?.tone || 'Professional but urgent',
+        length: initialData?.length || 'Short',
+        salesPersonId: initialData?.salesPersonId || '',
+        notes: initialData?.notes || '',
+        targetBusiness: initialData?.targetBusiness
     });
 
     const handleChange = (field: keyof AdRequest, value: any) => {
@@ -62,6 +64,20 @@ export const AdGenerator: React.FC<AdGeneratorProps> = ({ onBack }) => {
                 {/* Left Column: Controls */}
                 <div style={{ flex: 1, maxWidth: '500px', background: 'white', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
                     <h2 style={{ marginTop: 0, color: '#334155' }}>Campaign Settings</h2>
+
+                    {formData.targetBusiness && (
+                        <div style={{
+                            padding: '0.75rem',
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            borderRadius: '8px',
+                            marginBottom: '1.5rem',
+                            fontSize: '0.9rem',
+                            color: '#1e40af'
+                        }}>
+                            <strong>🎯 Targeting:</strong> {formData.targetBusiness.name} ({formData.targetBusiness.industry})
+                        </div>
+                    )}
 
                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#475569' }}>Product Focus</label>

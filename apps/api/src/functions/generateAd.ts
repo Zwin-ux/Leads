@@ -30,12 +30,26 @@ export async function generateAd(request: HttpRequest, context: InvocationContex
             }
         }
 
+        let targetContext = "";
+        if (body.targetBusiness) {
+            targetContext = `
+            Target Business Context:
+            Name: ${body.targetBusiness.name}
+            Industry: ${body.targetBusiness.industry || 'Unknown'}
+            Location: ${body.targetBusiness.city || ''}, ${body.targetBusiness.state || ''}
+            
+            Instruction: Tailor the script specifically to address pain points common in the ${body.targetBusiness.industry} industry. 
+            Mention the business name "${body.targetBusiness.name}" naturally in the script if appropriate.
+            `;
+        }
+
         const prompt = `
         Create a ${length} video ad script for AmPac Business Capital.
         Product: ${product}
         Goal: ${goal}
         Tone: ${tone}
         ${notes ? `Additional Notes: ${notes}` : ''}
+        ${targetContext}
         ${salesPersonContext}
 
         Format Requirements:

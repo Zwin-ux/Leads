@@ -7,6 +7,7 @@ import {
     type SearchDepth,
     type DataSource
 } from '../services/leadIntelligenceService';
+import { AdGenerator } from './AdGenerator';
 
 export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel: () => void }> = ({ onAddLead, onCancel }) => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -17,6 +18,7 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isDemoMode, setIsDemoMode] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedForAd, setSelectedForAd] = useState<EnrichedLead | null>(null);
 
     // New: Depth selector and source info
     const [depth, setDepth] = useState<SearchDepth>('standard');
@@ -361,6 +363,13 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                                                 onClick={() => setExpandedId(isExpanded ? null : business.id)}
                                             >
                                                 {isExpanded ? '▲ Less' : '▼ More'}
+                                            </button>
+                                            <button
+                                                className="expand-btn"
+                                                onClick={() => setSelectedForAd(business)}
+                                                style={{ color: '#db2777', fontWeight: 500 }}
+                                            >
+                                                ✨ Generate Ad
                                             </button>
                                             <button
                                                 className="btn-primary add-btn"
@@ -760,6 +769,41 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                     color: var(--primary);
                 }
             `}</style>
+
+            {selectedForAd && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'white',
+                    zIndex: 1000,
+                    overflow: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column'
+                }}>
+                    <div style={{ padding: '1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <button onClick={() => setSelectedForAd(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: '#64748b' }}>
+                            ← Back to Results
+                        </button>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <AdGenerator
+                            onBack={() => setSelectedForAd(null)}
+                            initialData={{
+                                targetBusiness: {
+                                    name: selectedForAd.company,
+                                    industry: selectedForAd.industry,
+                                    city: selectedForAd.city,
+                                    state: selectedForAd.state
+                                },
+                                product: selectedForAd.sbaFit === '504' ? 'SBA 504 Loan' : 'SBA 7(a) Loan'
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
