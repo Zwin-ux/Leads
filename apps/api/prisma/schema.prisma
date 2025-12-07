@@ -1,0 +1,40 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Lead {
+  id            String   @id @default(uuid())
+  company       String?
+  firstName     String?
+  lastName      String?
+  email         String?
+  phone         String?
+  
+  // Address Fields
+  address       String?
+  city          String?
+  state         String?
+  zip           String?
+  
+  // Business Metadata
+  source        String?
+  status        String   @default("new")
+  
+  // Flexible Data (Financials, AI Analysis, Stips)
+  // We use JSONB to match the previous NoSQL structure purely for speed of migration.
+  // In the future, we can normalize these into separate tables.
+  financials    Json?
+  aiAnalysis    Json?
+  stips         Json?
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

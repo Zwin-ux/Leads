@@ -1,46 +1,94 @@
+import { PrismaClient } from '@prisma/client';
 import type { Lead } from "@leads/shared";
 
-// --- IN-MEMORY REPOSITORY (No Database Required) ---
-// This serves as a "Demo/Dev" mode so the app works immediately.
-// Data is stored in RAM and will reset when the server restarts.
+// Create a single instance of Prisma Client
+const prisma = new PrismaClient();
 
 export class LeadRepository {
-    // Determine initial state or empty
-    private leads: Map<string, Lead> = new Map();
 
     constructor() {
-        console.log("Initializing In-Memory Lead Repository...");
-        // Add some dummy data for testing?
-        // Optional: Pre-populate
+        console.log("Initializing Prisma Lead Repository...");
     }
 
     async getAll(): Promise<Lead[]> {
-        return Array.from(this.leads.values());
+        try {
+            const leads = await prisma.lead.findMany();
+            // Prisma returns 'Json' types which need casting to compatible TS interfaces if strict
+            // But usually it just works at runtime. We might need 'as unknown as Lead[]' if types don't align perfectly.
+            return leads as unknown as Lead[];
+        } catch (e) {
+            console.error("Prisma getAll Error:", e);
+            return [];
+        }
     }
 
     async create(lead: Lead): Promise<Lead> {
-        // Ensure ID
-        if (!lead.id) {
-            lead.id = Math.random().toString(36).substring(7);
+        // Remove 'id' if it's undefined/null so Prisma generates a UUID
+        // OR preserve it if we want to set it manually (unlikely for new leads)
+        const { id, ...data } = lead;
+
+        try {
+            const created = await prisma.lead.create({
+                data: {
+                    ...data,
+                    financials: lead.financials as any,
+                    aiAnalysis: lead.aiAnalysis as any,
+                    stips: lead.stips as any
+                }
+            });
+            return created as unknown as Lead;
+        } catch (e) {
+            console.error("Prisma create Error:", e);
+            throw e;
         }
-        this.leads.set(lead.id, lead);
-        return lead;
     }
 
     async update(lead: Lead): Promise<Lead> {
-        if (!this.leads.has(lead.id)) {
-            throw new Error(`Lead with ID ${lead.id} not found`);
+        if (!lead.id) throw new Error("Cannot update lead without ID");
+
+        try {
+            const updated = await prisma.lead.update({
+                where: { id: lead.id },
+                data: {
+                    company: lead.company,
+                    firstName: lead.firstName,
+                    lastName: lead.lastName,
+                    email: lead.email,
+                    phone: lead.phone,
+                    address: lead.address,
+                    city: lead.city,
+                    state: lead.state,
+                    zip: lead.zip,
+                    source: lead.source,
+                    status: lead.status,
+                    financials: lead.financials as any,
+                    aiAnalysis: lead.aiAnalysis as any,
+                    stips: lead.stips as any
+                }
+            });
+            return updated as unknown as Lead;
+        } catch (e) {
+            console.error("Prisma update Error:", e);
+            throw e;
         }
-        this.leads.set(lead.id, lead);
-        return lead;
     }
 
     async bulkCreate(leads: Lead[]): Promise<void> {
-        for (const lead of leads) {
-            if (!lead.id) {
-                lead.id = Math.random().toString(36).substring(7);
-            }
-            this.leads.set(lead.id, lead);
+        // Prisma createMany is faster
+        try {
+            await prisma.lead.createMany({
+                data: leads.map(lead => {
+                    const { id, ...rest } = lead;
+                    return {
+                        ...rest,
+                        financials: lead.financials as any,
+                        aiAnalysis: lead.aiAnalysis as any,
+                        stips: lead.stips as any
+                    };
+                })
+            });
+        } catch (e) {
+            console.error("Prisma bulkCreate Error:", e);
         }
     }
 }
