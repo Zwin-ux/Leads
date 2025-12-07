@@ -491,6 +491,7 @@ export const LeadScout: React.FC<{ onAddLead: (lead: Lead) => void, onCancel: ()
                     border-radius: 12px;
                     font-size: 1.1rem;
                     transition: all 0.2s;
+                    min-width: 300px;
                 }
                 .search-input:focus {
                     background: rgba(15, 23, 42, 0.9);
