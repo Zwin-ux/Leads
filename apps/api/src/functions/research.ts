@@ -59,12 +59,19 @@ export async function research(request: HttpRequest, context: InvocationContext)
             const snippet = results.organic_results?.[0]?.snippet || "No summary found.";
             const title = results.organic_results?.[0]?.title || "";
 
+            // Try to find specific details in knowledge graph or snippets
+            const knowledgeGraph = results.knowledge_graph;
+            const revenue = knowledgeGraph?.revenue || "Unknown";
+            const owner = knowledgeGraph?.founder || knowledgeGraph?.ceo || "Unknown";
+
             return {
                 status: 200,
                 jsonBody: {
                     summary: `${title}: ${snippet}`,
                     headcount: "Check LinkedIn for exact numbers",
                     flags: ["Verify entity status manually"],
+                    revenue: revenue,
+                    owner: owner,
                     news: results.news_results?.[0]?.title || "No recent news found."
                 }
             };

@@ -90,8 +90,19 @@ export function getAvailableSources(): DataSource[] {
 
 async function searchGooglePlaces(query: string, location: string): Promise<RawBusinessResult[]> {
     try {
-        const searchQuery = `${query} in ${location}`;
-        const url = `${BACKEND_API_URL}/api/search/google?query=${encodeURIComponent(searchQuery)}`;
+        // Smart Query Logic: Append industry terms if generic
+        let smartQuery = query;
+        const lowerQuery = query.toLowerCase();
+
+        // If query seems to be requesting 504 type businesses but is generic, add keywords
+        if (!lowerQuery.includes('shop') && !lowerQuery.includes('hotel') && !lowerQuery.includes('warehouse')) {
+            if (lowerQuery.includes('machine') || lowerQuery.includes('manufacturing')) {
+                smartQuery += " OR Machine Shop OR Manufacturer";
+            }
+        }
+
+        const fullQuery = `${smartQuery} in ${location}`;
+        const url = `${BACKEND_API_URL}/api/search/google?query=${encodeURIComponent(fullQuery)}`;
 
         console.log('🔍 Searching Google via proxy:', url);
 
@@ -104,18 +115,27 @@ async function searchGooglePlaces(query: string, location: string): Promise<RawB
 
         const data = await response.json();
 
-        if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-            console.error('Google Places API status:', data.status, data.error_message);
+        if (data.status === 'ZERO_RESULTS') {
+            console.log("No results found for", fullQuery);
             return [];
         }
 
-        return (data.results || []).slice(0, 10).map((place: any) => ({
+        if (data.status !== 'OK' && data.results === undefined) {
+            // Some proxies return results directly, others inside 'results'
+            // If we implemented the proxy correctly it returns { results: [] }
+            console.error('Google Places API status:', data.status || 'Unknown');
+            return [];
+        }
+
+        const results = data.results || [];
+
+        return results.slice(0, 15).map((place: any) => ({
             source: 'google_places' as DataSource,
             name: place.name,
             address: place.formatted_address,
             city: extractCity(place.formatted_address),
             state: extractState(place.formatted_address),
-            phone: undefined,
+            phone: undefined, // Google Text Search often doesn't return phone, Details would needed
             website: undefined,
             rating: place.rating,
             reviewCount: place.user_ratings_total,
@@ -224,41 +244,49 @@ async function aiEnrichAndReason(
             body: JSON.stringify({
                 model: 'gpt-4o-mini',
                 messages: [
-                    {
-                        role: 'system',
-                        content: `You are an SBA loan specialist analyzing business leads. Given raw search results, you will:
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `You are a Senior SBA Loan Underwriter & Business Development Officer. 
+Your goal is to identify "High Quality" borrowers for SBA 504 and 7(a) loans from a raw list.
 
-1. DEDUPLICATE: If the same business appears from multiple sources, merge them
-2. VERIFY: Flag any that look like chains/franchises (less ideal for SBA)
-3. ASSESS SBA FIT: Based on industry and apparent size:
-   - 504: Real estate/equipment intensive (manufacturing, machine shops, hotels, medical facilities)
-   - 7a: Working capital needs (service businesses, retail, restaurants)
-   - Both: Could use either depending on project
-4. SCORE: Rate each lead 1-100 based on likely loan potential
-5. ENRICH: Estimate employee count and revenue range based on reviews/category
+HIGH QUALITY CRITERIA:
+- Established business (implied by reviews > 10 or generic legacy nature).
+- "Real" physical location (not a PO Box or virtual office).
+- Industry matches SBA preference (Manufacturing, Medical, Professional Services, Hotels).
 
-Return a JSON array of enriched leads. Be realistic - if data is sparse, say so.`
-                    },
-                    {
-                        role: 'user',
-                        content: `Query was: "${query}" in ${location}
+SBA FIT RULES:
+- **504 Loan** (Real Estate/Heavy Equipment): Look for Manufacturers, Machine Shops, Hotels, Medical Clinics, Warehouses.
+- **7(a) Loan** (Working Capital/Acquisition): Look for Restaurants, Retail, Service Businesses, Franchises, Dental practices.
+- **Both**: Medical practices often fit both (buying building vs buying practice).
 
-Raw results from APIs:
-${JSON.stringify(rawResults, null, 2)}
+SCORING (1-100):
+- 90+: Perfect 504 candidate (e.g., Manufacturer with good reviews).
+- 70-89: Good solid local business, likely 7(a) or small 504.
+- 40-69: Retail/Restaurant (higher risk, but doable).
+- <40: Vape shops, adult entertainment, speculative, or bad reviews.
 
-Return JSON array with these fields for each unique business:
-- company, legalName (if different), address, city, state, phone, website
-- industry (derived from categories)
-- sbaFit ("504", "7a", "Both", or "Unknown"), sbaFitReason
-- estimatedRevenue, estimatedEmployees
-- leadScore (1-100), confidence ("high"/"medium"/"low")
-- sources (array of which sources had this business)
+Output JSON array of enriched leads.`
+                        },
+                        {
+                            role: 'user',
+                            content: `Query: "${query}" in ${location}
+Raw Results: ${JSON.stringify(rawResults.map(r => ({ name: r.name, type: r.categories, rating: r.rating, reviews: r.reviewCount })), null, 2)}
 
-ONLY return valid JSON array, no markdown.`
-                    }
-                ],
-                max_tokens: 2500,
-                temperature: 0.3  // Lower temp for more consistent analysis
+Return JSON array:
+- company, legalName, address, city, state
+- industry
+- sbaFit (504, 7a, Both, Unknown), sbaFitReason (Be specific: "Manufacturer suitable for 504 RE purchase")
+- estimatedRevenue (Give a realistic range based on industry/size ex: "$1M - $5M")
+- estimatedEmployees (Estimate based on type ex: "10-20")
+- leadScore (1-100), confidence
+- sources (pass through)
+
+Strict JSON only.`
+                        }
+                    ],
+                    max_tokens: 3000,
+                    temperature: 0.2
             })
         });
 
