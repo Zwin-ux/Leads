@@ -16,9 +16,16 @@ const PORT = process.env.PORT || 3000;
 // This bypasses the 'cors' library logic which might be filtering origins unexpectedly.
 app.use((req, res, next) => {
     // Log for debugging
-    console.log(`[REQUEST] ${req.method} ${req.path} | Origin: ${req.headers.origin}`);
+    const origin = req.headers.origin;
+    console.log(`[REQUEST] ${req.method} ${req.path} | Origin: ${origin}`);
 
-    res.header("Access-Control-Allow-Origin", "*"); // Allow ALL
+    // If Origin is present, echo it back. Otherwise allow ALL (for non-browser tools).
+    if (origin) {
+        res.header("Access-Control-Allow-Origin", origin);
+    } else {
+        res.header("Access-Control-Allow-Origin", "*");
+    }
+
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
     res.header("Access-Control-Allow-Credentials", "true");
