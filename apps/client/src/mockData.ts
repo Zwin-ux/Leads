@@ -144,14 +144,7 @@ export const mockSalesTeam: any[] = [
         email: 'ed.ryan@ampac.com',
         products: ['504', '7a']
     },
-    {
-        id: 'sp2',
-        name: 'Mazen Zwin',
-        title: 'Vice President',
-        phone: '909-555-0102',
-        email: 'mazen@ampac.com',
-        products: ['504', 'Micro']
-    },
+
     {
         id: 'sp3',
         name: 'Sarah Jenkins',

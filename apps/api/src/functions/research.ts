@@ -83,12 +83,35 @@ export async function research(request: HttpRequest, context: InvocationContext)
 
     } catch (error) {
         context.log(`Error fetching research: ${error}`);
-        return { status: 500, body: "Failed to fetch research data" };
+        return {
+            status: 500,
+            headers: { 'Access-Control-Allow-Origin': '*' },
+            body: "Failed to fetch research data"
+        };
     }
 };
 
 app.http('research', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
-    handler: research
+    handler: async (request, context) => {
+        if (request.method === 'OPTIONS') {
+            return {
+                status: 204,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }
+            };
+        }
+        const response: any = await research(request, context);
+        response.headers = {
+            ...(response.headers || {}),
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        };
+        return response;
+    }
 });

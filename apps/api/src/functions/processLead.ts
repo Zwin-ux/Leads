@@ -42,15 +42,45 @@ export async function processLead(request: HttpRequest, context: InvocationConte
             result = { tools: graphToolbox.getTools() };
         }
 
-        return { status: 200, jsonBody: result };
+        return {
+            status: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+            },
+            jsonBody: result
+        };
     } catch (error: any) {
         context.log(`Error: ${error.message}`);
-        return { status: 500, body: error.message };
+        return {
+            status: 500,
+            headers: { 'Access-Control-Allow-Origin': '*' },
+            body: error.message
+        };
     }
 };
 
 app.http('processLead', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
-    handler: processLead
+    handler: async (request, context) => {
+        if (request.method === 'OPTIONS') {
+            return {
+                status: 204,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }
+            };
+        }
+
+        const response: any = await processLead(request, context);
+        response.headers = {
+            ...(response.headers || {}),
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        };
+        return response;
+    }
 });

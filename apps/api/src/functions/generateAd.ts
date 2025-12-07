@@ -5,7 +5,7 @@ import { AdRequest, SalesPerson } from "@leads/shared";
 // Mock Sales Team Data (Mirroring Client for Context Injection)
 const SALES_TEAM: Partial<SalesPerson>[] = [
     { id: 'sp1', name: 'Ed Ryan', title: 'SVP, Business Development', phone: '909-258-4585', email: 'ed.ryan@ampac.com' },
-    { id: 'sp2', name: 'Mazen Zwin', title: 'Vice President', phone: '909-555-0102', email: 'mazen@ampac.com' },
+
     { id: 'sp3', name: 'Sarah Jenkins', title: 'Business Development Officer', phone: '909-555-0103', email: 'sarah.j@ampac.com' }
 ];
 
@@ -77,17 +77,40 @@ export async function generateAd(request: HttpRequest, context: InvocationContex
 
         return {
             status: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
             jsonBody: result
         };
 
     } catch (error) {
         context.log(`Error generating ad: ${error}`);
-        return { status: 500, body: "Internal Server Error" };
+        return {
+            status: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+            },
+            body: "Internal Server Error"
+        };
     }
 };
 
 app.http('generateAd', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
-    handler: generateAd
+    handler: async (request, context) => {
+        if (request.method === 'OPTIONS') {
+            return {
+                status: 204,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }
+            };
+        }
+        return generateAd(request, context);
+    }
 });

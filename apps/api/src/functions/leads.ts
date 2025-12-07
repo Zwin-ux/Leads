@@ -26,15 +26,58 @@ export async function leads(request: HttpRequest, context: InvocationContext): P
             return { status: 200, jsonBody: updatedLead };
         }
 
-        return { status: 405, body: "Method not allowed" };
+        return {
+            status: 405,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: "Method not allowed"
+        };
     } catch (error: any) {
         context.log(`Error: ${error.message}`);
-        return { status: 500, body: error.message };
+        return {
+            status: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+            },
+            body: error.message
+        };
     }
 };
 
 app.http('leads', {
-    methods: ['GET', 'POST', 'PUT'],
+    methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
     authLevel: 'anonymous',
-    handler: leads
+    handler: async (request, context) => {
+        if (request.method === 'OPTIONS') {
+            return {
+                status: 204,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }
+            };
+        }
+
+        const response = await leads(request, context);
+        // Ensure headers are present in success responses too
+        if (response && typeof response === 'object' && !('headers' in response)) {
+            (response as any).headers = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            };
+        } else if (response && typeof response === 'object' && 'headers' in response) {
+            (response as any).headers = {
+                ...(response as any).headers,
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            };
+        }
+        return response;
+    }
 });
