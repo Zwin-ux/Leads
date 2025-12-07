@@ -9,6 +9,7 @@
     "dev": "ts-node src/server.ts"
   },
   "dependencies": {
+    "@azure/cosmos": "^4.9.0",
     "@leads/shared": "*",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
