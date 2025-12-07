@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import axios from 'axios';
 import { leadRepository } from './services/leadRepository'; // Assuming this exists or will need checking
-import { Lead } from '@leads/shared';
+import type { Lead } from "@leads/shared";
 
 // Load env vars
 dotenv.config();
@@ -14,6 +14,11 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors({ origin: '*' })); // Simple, wide-open CORS as requested
 app.use(express.json());
+
+// Health Check
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+});
 
 // --- ROUTES ---
 

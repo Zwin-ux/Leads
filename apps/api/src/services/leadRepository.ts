@@ -1,5 +1,5 @@
 import { CosmosClient, Container, Database } from "@azure/cosmos";
-import { Lead } from "@leads/shared";
+import type { Lead } from "@leads/shared";
 
 const CONNECTION_STRING = process.env.COSMOS_CONNECTION_STRING;
 const DATABASE_ID = "LeadSheetsDB";
