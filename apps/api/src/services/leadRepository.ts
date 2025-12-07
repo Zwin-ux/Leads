@@ -1,69 +1,46 @@
-import { CosmosClient, Container, Database } from "@azure/cosmos";
 import type { Lead } from "@leads/shared";
 
-const CONNECTION_STRING = process.env.COSMOS_CONNECTION_STRING;
-const DATABASE_ID = "LeadSheetsDB";
-const CONTAINER_ID = "Leads";
+// --- IN-MEMORY REPOSITORY (No Database Required) ---
+// This serves as a "Demo/Dev" mode so the app works immediately.
+// Data is stored in RAM and will reset when the server restarts.
 
 export class LeadRepository {
-    private client: CosmosClient | null = null;
-    private database: Database | null = null;
-    private container: Container | null = null;
+    // Determine initial state or empty
+    private leads: Map<string, Lead> = new Map();
 
     constructor() {
-        if (CONNECTION_STRING) {
-            this.client = new CosmosClient(CONNECTION_STRING);
-        } else {
-            console.warn("COSMOS_CONNECTION_STRING is not defined. Persistence will fail.");
-        }
-    }
-
-    private async init() {
-        if (!this.client) throw new Error("Cosmos Client not initialized");
-        if (!this.database) {
-            const { database } = await this.client.databases.createIfNotExists({ id: DATABASE_ID });
-            this.database = database;
-        }
-        if (!this.container) {
-            const { container } = await this.database.containers.createIfNotExists({ id: CONTAINER_ID });
-            this.container = container;
-        }
+        console.log("Initializing In-Memory Lead Repository...");
+        // Add some dummy data for testing?
+        // Optional: Pre-populate
     }
 
     async getAll(): Promise<Lead[]> {
-        await this.init();
-        if (!this.container) throw new Error("Container not initialized");
-
-        const { resources } = await this.container.items
-            .query("SELECT * FROM c")
-            .fetchAll();
-        return resources as Lead[];
+        return Array.from(this.leads.values());
     }
 
     async create(lead: Lead): Promise<Lead> {
-        await this.init();
-        if (!this.container) throw new Error("Container not initialized");
-
-        const { resource } = await this.container.items.create(lead);
-        return resource as Lead;
+        // Ensure ID
+        if (!lead.id) {
+            lead.id = Math.random().toString(36).substring(7);
+        }
+        this.leads.set(lead.id, lead);
+        return lead;
     }
 
     async update(lead: Lead): Promise<Lead> {
-        await this.init();
-        if (!this.container) throw new Error("Container not initialized");
-
-        const { resource } = await this.container.item(lead.id, lead.id).replace(lead);
-        return resource as Lead;
+        if (!this.leads.has(lead.id)) {
+            throw new Error(`Lead with ID ${lead.id} not found`);
+        }
+        this.leads.set(lead.id, lead);
+        return lead;
     }
 
     async bulkCreate(leads: Lead[]): Promise<void> {
-        await this.init();
-        if (!this.container) throw new Error("Container not initialized");
-
-        // Simple serial implementation for now. 
-        // For large datasets, consider using Bulk support or parallel promises.
         for (const lead of leads) {
-            await this.container.items.create(lead);
+            if (!lead.id) {
+                lead.id = Math.random().toString(36).substring(7);
+            }
+            this.leads.set(lead.id, lead);
         }
     }
 }

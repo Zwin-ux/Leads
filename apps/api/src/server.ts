@@ -113,26 +113,46 @@ app.get('/api/search/google', async (req, res) => {
 });
 
 // 2. Leads CRUD
-app.get('/leads', async (req, res) => {
-    const leads = await leadRepository.getAll();
-    res.json(leads);
-});
-
-app.post('/leads', async (req, res) => {
-    const body = req.body;
-    if (Array.isArray(body)) {
-        await leadRepository.bulkCreate(body as Lead[]);
-        res.status(201).send("Bulk import successful");
-    } else {
-        const newLead = await leadRepository.create(body as Lead);
-        res.status(201).json(newLead);
+app.get('/leads', async (req, res, next) => {
+    try {
+        const leads = await leadRepository.getAll();
+        res.json(leads);
+    } catch (e) {
+        console.error("Leads GET Error:", e);
+        // Fallback for Demo if DB fails
+        res.json([]);
     }
 });
 
-app.put('/leads', async (req, res) => {
-    const body = req.body;
-    const updated = await leadRepository.update(body);
-    res.json(updated);
+app.post('/leads', async (req, res, next) => {
+    try {
+        const body = req.body;
+        if (Array.isArray(body)) {
+            await leadRepository.bulkCreate(body as Lead[]);
+            res.status(201).send("Bulk import successful");
+        } else {
+            const newLead = await leadRepository.create(body as Lead);
+            res.status(201).json(newLead);
+        }
+    } catch (e) {
+        next(e);
+    }
+});
+
+app.put('/leads', async (req, res, next) => {
+    try {
+        const body = req.body;
+        const updated = await leadRepository.update(body);
+        res.json(updated);
+    } catch (e) {
+        next(e);
+    }
+});
+
+// Global Error Handler
+app.use((err: any, req: any, res: any, next: any) => {
+    console.error("Global API Error:", err);
+    res.status(500).json({ error: err.message || "Internal Server Error" });
 });
 
 // Start Server
