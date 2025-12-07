@@ -1,83 +1,46 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { leadRepository } from "../services/leadRepository";
 import { Lead } from "@leads/shared";
+import { createResponse } from "../utils/response";
 
 export async function leads(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     context.log(`Processing leads request: ${request.method}`);
 
+    // Preflight safety
+    if (request.method === 'OPTIONS') {
+        return createResponse(204);
+    }
+
     try {
         if (request.method === "GET") {
             const leads = await leadRepository.getAll();
-            return { status: 200, jsonBody: leads };
+            return createResponse(200, leads);
         } else if (request.method === "POST") {
             const body = await request.json() as any;
 
             // Check if it's a bulk import (array) or single create
             if (Array.isArray(body)) {
                 await leadRepository.bulkCreate(body as Lead[]);
-                return { status: 201, body: "Bulk import successful" };
+                return createResponse(201, "Bulk import successful");
             } else {
                 const newLead = await leadRepository.create(body as Lead);
-                return { status: 201, jsonBody: newLead };
+                return createResponse(201, newLead);
             }
         } else if (request.method === "PUT") {
             const body = await request.json() as Lead;
             const updatedLead = await leadRepository.update(body);
-            return { status: 200, jsonBody: updatedLead };
+            return createResponse(200, updatedLead);
         }
 
-        return {
-            status: 405,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            },
-            body: "Method not allowed"
-        };
+        return createResponse(405, "Method not allowed");
     } catch (error: any) {
         context.log(`Error: ${error.message}`);
-        return {
-            status: 500,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-            },
-            body: error.message
-        };
+        return createResponse(500, error.message);
     }
 };
 
 app.http('leads', {
     methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
     authLevel: 'anonymous',
-    handler: async (request, context) => {
-        if (request.method === 'OPTIONS') {
-            return {
-                status: 204,
-                headers: {
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type'
-                }
-            };
-        }
-
-        const response = await leads(request, context);
-        // Ensure headers are present in success responses too
-        if (response && typeof response === 'object' && !('headers' in response)) {
-            (response as any).headers = {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            };
-        } else if (response && typeof response === 'object' && 'headers' in response) {
-            (response as any).headers = {
-                ...(response as any).headers,
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            };
-        }
-        return response;
-    }
+    handler: leads
 });

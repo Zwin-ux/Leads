@@ -448,328 +448,200 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
             <style>{`
                 .lead-generator {
                     padding: 0;
-                    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+                    background: #0f172a;
                     min-height: 100vh;
                     display: flex;
                     flex-direction: column;
                     overflow: hidden;
+                    font-family: 'Inter', system-ui, -apple-system, sans-serif;
                 }
                 .generator-header {
                     display: flex;
                     align-items: center;
-                    gap: 1rem;
-                    padding: 1.5rem 2rem;
-                    background: rgba(255,255,255,0.05);
-                    backdrop-filter: blur(10px);
-                    border-bottom: 1px solid rgba(255,255,255,0.1);
+                    gap: 1.5rem;
+                    padding: 1.5rem 3rem;
+                    background: rgba(15, 23, 42, 0.8);
+                    backdrop-filter: blur(12px);
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                    position: sticky;
+                    top: 0;
+                    z-index: 100;
                 }
                 .generator-header h2 {
                     color: white;
                     font-size: 1.5rem;
-                    font-weight: 600;
+                    font-weight: 700;
                     margin: 0;
-                    background: linear-gradient(90deg, #22d3ee, #a78bfa);
+                    letter-spacing: -0.02em;
+                    background: linear-gradient(135deg, white 0%, #94a3b8 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 }
                 .generator-header .subtitle {
-                    color: rgba(255,255,255,0.6);
+                    color: #64748b;
                     font-size: 0.9rem;
+                    font-weight: 500;
                     margin-left: auto;
+                    padding: 0.5rem 1rem;
+                    background: rgba(255,255,255,0.03);
+                    border-radius: 99px;
+                    border: 1px solid rgba(255,255,255,0.05);
                 }
                 .back-btn {
-                    background: rgba(255,255,255,0.1);
-                    border: 1px solid rgba(255,255,255,0.2);
-                    color: white;
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: #e2e8f0;
                     cursor: pointer;
                     font-size: 0.9rem;
-                    padding: 0.5rem 1rem;
+                    font-weight: 500;
+                    padding: 0.6rem 1.2rem;
                     border-radius: 8px;
-                    transition: all 0.2s;
+                    transition: all 0.2s ease;
                 }
                 .back-btn:hover {
-                    background: rgba(255,255,255,0.2);
+                    background: rgba(255,255,255,0.08);
+                    border-color: rgba(255,255,255,0.2);
+                    transform: translateX(-2px);
                 }
                 .search-section {
-                    background: rgba(255,255,255,0.95);
-                    padding: 1.5rem 2rem;
-                    margin: 1.5rem 2rem;
-                    border-radius: 16px;
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-                }
-                .search-row {
-                    display: flex;
-                    gap: 1rem;
-                    margin-bottom: 1rem;
+                    background: rgba(30, 41, 59, 0.4);
+                    padding: 2rem;
+                    margin: 2rem auto;
+                    width: 90%;
+                    max-width: 1200px;
+                    border-radius: 20px;
+                    border: 1px solid rgba(255,255,255,0.05);
+                    box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 20px 40px -10px rgba(0,0,0,0.3);
                 }
                 .search-input {
-                    flex: 1;
-                    padding: 0.875rem 1.25rem;
-                    border: 2px solid #e2e8f0;
+                    background: rgba(15, 23, 42, 0.6);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: white;
+                    padding: 1rem 1.5rem;
                     border-radius: 12px;
-                    font-size: 1rem;
+                    font-size: 1.1rem;
                     transition: all 0.2s;
                 }
                 .search-input:focus {
-                    outline: none;
+                    background: rgba(15, 23, 42, 0.9);
                     border-color: #3b82f6;
-                    box-shadow: 0 0 0 4px rgba(59,130,246,0.1);
+                    box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
                 }
                 .location-select, .depth-select {
-                    padding: 0.875rem 1rem;
-                    border: 2px solid #e2e8f0;
+                    background: rgba(15, 23, 42, 0.6);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: #e2e8f0;
+                    padding: 0 1.2rem;
                     border-radius: 12px;
-                    font-size: 1rem;
-                    background: white;
-                    cursor: pointer;
-                }
-                .location-select {
-                    min-width: 180px;
-                }
-                .search-btn {
-                    padding: 0.875rem 2rem;
-                    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-                    border: none;
-                    border-radius: 12px;
-                    color: white;
-                    font-weight: 600;
                     font-size: 1rem;
                     cursor: pointer;
                     transition: all 0.2s;
-                    box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+                }
+                .location-select:hover, .depth-select:hover {
+                    border-color: rgba(255,255,255,0.2);
+                    background: rgba(15, 23, 42, 0.8);
+                }
+                .search-btn {
+                    padding: 0 2.5rem;
+                    background: linear-gradient(135deg, #3b82f6, #2563eb);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
                 }
                 .search-btn:hover:not(:disabled) {
                     transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(59,130,246,0.4);
-                }
-                .search-btn:disabled {
-                    opacity: 0.6;
-                    cursor: not-allowed;
+                    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
                 }
                 .quick-tags {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    font-size: 0.875rem;
-                    color: #64748b;
-                    flex-wrap: wrap;
+                    margin-top: 1rem;
                 }
                 .tag-btn {
-                    padding: 0.375rem 0.75rem;
-                    background: #f1f5f9;
-                    border: none;
-                    border-radius: 16px;
-                    cursor: pointer;
-                    font-size: 0.8rem;
-                    transition: all 0.2s;
+                    background: rgba(255,255,255,0.05);
+                    border: 1px solid rgba(255,255,255,0.05);
+                    color: #94a3b8;
+                    border-radius: 8px;
+                    padding: 0.5rem 1rem;
+                    font-weight: 500;
+                    letter-spacing: 0.02em;
                 }
                 .tag-btn:hover {
-                    background: #e0f2fe;
-                    color: #0284c7;
+                    background: rgba(59, 130, 246, 0.1);
+                    border-color: rgba(59, 130, 246, 0.2);
+                    color: #60a5fa;
                 }
-                .results-section {
-                    flex: 1;
-                    overflow-y: auto;
-                }
-                .results-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 1rem;
-                    font-size: 0.9rem;
-                    color: #64748b;
-                }
-                .confidence-legend {
-                    display: flex;
-                    gap: 1rem;
-                    font-size: 0.8rem;
-                }
-                .loading-state, .empty-state {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 3rem;
-                    text-align: center;
-                    color: #64748b;
-                }
-                .loading-sub {
-                    font-size: 0.85rem;
-                    opacity: 0.7;
-                }
-                .example-searches {
-                    text-align: left;
-                    margin-top: 1rem;
-                    padding: 1rem;
-                    background: #f8fafc;
-                    border-radius: 8px;
-                }
-                .example-searches ul {
-                    margin: 0.5rem 0 0 0;
-                    padding-left: 1.5rem;
-                }
-                .example-searches li {
-                    margin: 0.5rem 0;
-                }
-                .spinner {
-                    width: 40px;
-                    height: 40px;
-                    border: 3px solid #e2e8f0;
-                    border-top-color: var(--primary);
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                    margin-bottom: 1rem;
-                }
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
+                /* Results */
                 .results-grid {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 1rem;
-                    padding: 0 2rem 2rem;
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+                    gap: 1.5rem;
+                    padding: 0 3rem 3rem;
+                    max-width: 1600px;
+                    margin: 0 auto;
                 }
                 .result-card {
-                    background: white;
+                    background: rgba(30, 41, 59, 0.4);
+                    border: 1px solid rgba(255,255,255,0.05);
                     border-radius: 16px;
-                    border: none;
-                    transition: all 0.3s ease;
                     overflow: hidden;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    backdrop-filter: blur(4px);
                 }
                 .result-card:hover {
                     transform: translateY(-4px);
-                    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
-                }
-                .result-card.expanded {
-                    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+                    background: rgba(30, 41, 59, 0.6);
+                    border-color: rgba(255,255,255,0.1);
+                    box-shadow: 0 20px 40px -5px rgba(0,0,0,0.4);
                 }
                 .result-main {
-                    padding: 1.25rem;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-start;
+                    padding: 1.5rem;
                 }
-                .result-info h3 {
-                    margin: 0;
-                    color: var(--text-primary);
-                    display: inline;
-                }
-                .company-row {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    margin-bottom: 0.5rem;
-                }
-                .sba-badge {
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 4px;
-                    font-size: 0.75rem;
-                    font-weight: 600;
-                }
-                .confidence-dot {
-                    width: 8px;
-                    height: 8px;
-                    border-radius: 50%;
-                }
-                .legal-name {
-                    font-size: 0.8rem;
-                    color: #94a3b8;
-                    margin: 0 0 0.25rem 0;
-                    font-style: italic;
+                .result-card h3 {
+                    color: #f1f5f9;
+                    font-size: 1.1rem;
+                    line-height: 1.4;
+                    margin-right: 0.5rem;
                 }
                 .contact-name {
-                    font-weight: 500;
-                    color: #475569;
-                    margin: 0 0 0.25rem 0;
+                    color: #e2e8f0;
                 }
-                .contact-name .role {
+                .contact-details {
                     color: #94a3b8;
-                    font-weight: 400;
-                }
-                .contact-details, .location {
-                    font-size: 0.875rem;
-                    color: #64748b;
-                    margin: 0 0 0.25rem 0;
-                }
-                .quick-stats {
-                    display: flex;
-                    gap: 1rem;
-                    margin-top: 0.5rem;
                 }
                 .stat {
-                    font-size: 0.8rem;
-                    color: #64748b;
-                    background: #f8fafc;
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 4px;
-                }
-                .result-actions {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.5rem;
-                    align-items: flex-end;
+                    background: rgba(15, 23, 42, 0.5);
+                    border: 1px solid rgba(255,255,255,0.05);
+                    color: #cbd5e1;
                 }
                 .expand-btn {
-                    background: none;
-                    border: none;
                     color: #64748b;
-                    cursor: pointer;
-                    font-size: 0.8rem;
-                    padding: 0.25rem 0.5rem;
                 }
                 .expand-btn:hover {
-                    color: var(--primary);
-                }
-                .add-btn {
-                    padding: 0.5rem 1rem;
-                    white-space: nowrap;
+                    color: #f1f5f9;
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 6px;
                 }
                 .result-details {
-                    padding: 1rem 1.25rem 1.25rem;
-                    border-top: 1px solid #e2e8f0;
-                    background: #f8fafc;
-                }
-                .detail-grid {
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 1rem;
-                    margin-bottom: 1rem;
-                }
-                .detail-item .label {
-                    display: block;
-                    font-size: 0.75rem;
-                    color: #94a3b8;
-                    text-transform: uppercase;
-                    margin-bottom: 0.25rem;
+                    background: rgba(15, 23, 42, 0.5);
+                    border-top: 1px solid rgba(255,255,255,0.05);
+                    color: #cbd5e1;
                 }
                 .detail-item .value {
-                    color: #334155;
-                    font-size: 0.9rem;
-                }
-                .detail-item .value a {
-                    color: var(--primary);
+                    color: #f1f5f9;
                 }
                 .sba-analysis {
-                    background: white;
-                    padding: 0.75rem 1rem;
-                    border-radius: 8px;
-                    font-size: 0.9rem;
-                    margin-bottom: 0.75rem;
-                    border-left: 3px solid var(--primary);
+                    background: rgba(30, 41, 59, 0.5);
+                    border-left: 3px solid #3b82f6;
+                    color: #e2e8f0;
                 }
-                .sos-link {
-                    font-size: 0.85rem;
+                .loading-state {
+                    color: #94a3b8;
                 }
-                .sos-link a {
-                    color: #64748b;
-                    text-decoration: none;
-                }
-                .sos-link a:hover {
-                    color: var(--primary);
+                .spinner {
+                    border-color: rgba(255,255,255,0.1);
+                    border-top-color: #3b82f6;
                 }
             `}</style>
 
+            {/* Same Ad Generator Modal */}
             {selectedForAd && (
                 <div style={{
                     position: 'fixed',
@@ -777,18 +649,30 @@ export const LeadGenerator: React.FC<{ onAddLead: (lead: Lead) => void, onCancel
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'white',
-                    zIndex: 1000,
-                    overflow: 'auto',
+                    background: '#0f172a',
+                    zIndex: 2000,
                     display: 'flex',
                     flexDirection: 'column'
                 }}>
-                    <div style={{ padding: '1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <button onClick={() => setSelectedForAd(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: '#64748b' }}>
+                    <div style={{ padding: '1rem 2rem', background: 'rgba(30, 41, 59, 0.8)', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center' }}>
+                        <button
+                            onClick={() => setSelectedForAd(null)}
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '8px',
+                                color: 'white',
+                                padding: '0.5rem 1rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                            }}
+                        >
                             ← Back to Results
                         </button>
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, overflow: 'auto' }}>
                         <AdGenerator
                             onBack={() => setSelectedForAd(null)}
                             initialData={{
