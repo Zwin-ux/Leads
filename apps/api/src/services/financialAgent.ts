@@ -55,19 +55,19 @@ export class FinancialAgent {
 
         if (dscr >= 1.50) {
             cfScore = 5;
-            cfReason = \`Strong DSCR of \${dscr}x, significantly exceeding the 1.15x SBA requirement.\`;
+            cfReason = `Strong DSCR of ${dscr}x, significantly exceeding the 1.15x SBA requirement.`;
         } else if (dscr >= 1.25) {
             cfScore = 4;
-            cfReason = \`Healthy DSCR of \${dscr}x. Meets SBA requirements with a comfortable buffer.\`;
+            cfReason = `Healthy DSCR of ${dscr}x. Meets SBA requirements with a comfortable buffer.`;
         } else if (dscr >= 1.15) {
             cfScore = 3;
-            cfReason = \`DSCR of \${dscr}x meets the minimum 1.15x SBA requirement.\`;
+            cfReason = `DSCR of ${dscr}x meets the minimum 1.15x SBA requirement.`;
         } else if (dscr >= 1.0) {
             cfScore = 2;
-            cfReason = \`DSCR of \${dscr}x is marginal and below the 1.15x requirement. Mitigating factors needed.\`;
+            cfReason = `DSCR of ${dscr}x is marginal and below the 1.15x requirement. Mitigating factors needed.`;
         } else {
             cfScore = 1;
-            cfReason = \`Negative or weak DSCR (\${dscr}x). Business does not support the proposed debt.\`;
+            cfReason = `Negative or weak DSCR (${dscr}x). Business does not support the proposed debt.`;
         }
 
         // Collateral (LTV)
@@ -76,19 +76,19 @@ export class FinancialAgent {
 
         if (ltv <= 50) {
             colScore = 5;
-            colReason = \`Excellent LTV of \${ltv}%. Collateral coverage is very strong.\`;
+            colReason = `Excellent LTV of ${ltv}%. Collateral coverage is very strong.`;
         } else if (ltv <= 70) {
             colScore = 4;
-            colReason = \`Strong LTV of \${ltv}%. Typical for conservative conventional lending.\`;
+            colReason = `Strong LTV of ${ltv}%. Typical for conservative conventional lending.`;
         } else if (ltv <= 85) {
             colScore = 3;
-            colReason = \`Standard SBA LTV of \${ltv}%. Fully secured within program guidelines.\`;
+            colReason = `Standard SBA LTV of ${ltv}%. Fully secured within program guidelines.`;
         } else if (ltv <= 90) {
             colScore = 2;
-            colReason = \`High LTV of \${ltv}%. 504 Program allows up to 90%, but risk is elevated.\`;
+            colReason = `High LTV of ${ltv}%. 504 Program allows up to 90%, but risk is elevated.`;
         } else {
             colScore = 1;
-            colReason = \`Excessive LTV of \${ltv}%. May require additional external collateral.\`;
+            colReason = `Excessive LTV of ${ltv}%. May require additional external collateral.`;
         }
 
         return {
