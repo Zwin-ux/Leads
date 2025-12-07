@@ -12,7 +12,33 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors({ origin: '*' })); // Simple, wide-open CORS as requested
+const allowedOrigins = [
+    'https://leads-production-e11a.up.railway.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            // For testing, strictly log but maybe allow? No, let's stick to the list.
+            // actually, let's allow ANY railway app for safety
+            if (origin.includes('up.railway.app')) {
+                return callback(null, true);
+            }
+            return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
+        }
+        return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
+
+// Enable Pre-Flight for all routes
+app.options('*', cors());
+
 app.use(express.json());
 
 // Health Check
