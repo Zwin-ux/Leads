@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { apiService } from '../services/apiService';
 import { mockSalesTeam } from '../mockData';
 import { LogoAds } from './LogoAds';
-import type { SalesPerson, AdRequest } from '@leads/shared';
+import type { AdRequest } from '@leads/shared';
 
 interface AdGeneratorProps {
     onBack: () => void;
