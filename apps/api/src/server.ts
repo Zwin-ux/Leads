@@ -22,22 +22,27 @@ app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            // For testing, strictly log but maybe allow? No, let's stick to the list.
-            // actually, let's allow ANY railway app for safety
-            if (origin.includes('up.railway.app')) {
-                return callback(null, true);
-            }
-            return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
+
+        if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.up.railway.app')) {
+            return callback(null, true);
         }
-        return callback(null, true);
+
+        console.error('BLOCKED CORS ORIGIN:', origin);
+        return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Enable Pre-Flight for all routes
 app.options('*', cors());
+
+app.use((req, res, next) => {
+    // Log origin for debugging production issues
+    console.log(`Incoming ${req.method} from Origin: ${req.headers.origin}`);
+    next();
+});
 
 app.use(express.json());
 

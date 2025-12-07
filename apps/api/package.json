@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/src/functions/*.js",
   "scripts": {
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
     "start": "node dist/server.js",
     "dev": "ts-node src/server.ts"
   },
