@@ -110,6 +110,28 @@ export class ApiService {
         if (!response.ok) throw new Error("Research API failed");
         return await response.json();
     }
+
+
+    async generateAd(request: any): Promise<any> {
+        // request is AdRequest from shared
+        if (IS_DEMO) {
+            // Mock response in demo mode if API not running
+            return new Promise(resolve => setTimeout(() => resolve({
+                hooks: ["Demo Hook 1", "Demo Hook 2"],
+                beats: ["Beat 1", "Beat 2"],
+                caption: "Demo Caption"
+            }), 1000));
+        }
+
+        const response = await fetch(`${API_URL}/generateAd`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request)
+        });
+
+        if (!response.ok) throw new Error("Ad generation failed");
+        return await response.json();
+    }
 }
 
 export const apiService = new ApiService();

@@ -73,6 +73,23 @@ export class BrainService {
             return "Could not analyze deal.";
         }
     }
+
+    async generateAdScript(context: any): Promise<any> {
+        try {
+            const response = await axios.post(`${BRAIN_SERVICE_URL}/v1/agents/trigger`, {
+                agent: "copywriter",
+                input: {
+                    task: "generate_ad_script",
+                    ...context
+                }
+            });
+            // Expecting JSON shape: { hooks: string[], beats: string[], caption: string }
+            return response.data;
+        } catch (error) {
+            console.error("Error generating ad script:", error);
+            throw new Error("Failed to generate ad script.");
+        }
+    }
 }
 
 export const brainService = new BrainService();

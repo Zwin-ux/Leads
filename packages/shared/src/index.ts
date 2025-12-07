@@ -295,3 +295,21 @@ export const DOC_TYPE_LABELS: Record<DocumentType, string> = {
     'sba_form_1244': 'SBA Form 1244 (Application)',
     'credit_report': 'Credit Report'
 };
+
+export interface SalesPerson {
+    id: string;
+    name: string;
+    title: string;
+    phone: string;
+    email: string;
+    products: string[]; // e.g., '504', '7a'
+}
+
+export interface AdRequest {
+    product: string;
+    goal: string;
+    tone: string;
+    length: 'Short' | 'Medium' | 'Long';
+    salesPersonId?: string;
+    notes?: string;
+}

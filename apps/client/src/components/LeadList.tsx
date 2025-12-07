@@ -17,6 +17,7 @@ import { UnderwriterDashboard } from './UnderwriterDashboard';
 import { BDODashboard } from './BDODashboard';
 import { LODashboard } from './LODashboard';
 import { IntegrationsPanel } from './IntegrationsPanel';
+import { AdGenerator } from './AdGenerator';
 
 const LeadList: React.FC = () => {
     const currentUser = authService.getCurrentUser();
@@ -37,7 +38,7 @@ const LeadList: React.FC = () => {
         return 'list';
     };
 
-    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator' | 'bankers' | 'dashboard' | 'processor_dashboard' | 'underwriter_dashboard' | 'bdo_dashboard' | 'lo_dashboard' | 'integrations'>(getInitialView());
+    const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'generator' | 'bankers' | 'dashboard' | 'processor_dashboard' | 'underwriter_dashboard' | 'bdo_dashboard' | 'lo_dashboard' | 'integrations' | 'ad_generator'>(getInitialView());
     const [selectedOwner, setSelectedOwner] = useState<string>(currentUser?.name || 'All');
     const [filterStale, setFilterStale] = useState(false);
 
@@ -309,6 +310,10 @@ const LeadList: React.FC = () => {
         return <IntegrationsPanel onBack={() => setViewMode('list')} />;
     }
 
+    if (viewMode === 'ad_generator') {
+        return <AdGenerator onBack={() => setViewMode('list')} />;
+    }
+
     if (viewMode === 'dashboard') {
         const handleReassignLead = async (leadId: string, newOwner: string) => {
             const leadToUpdate = leads.find(l => l.id === leadId);
@@ -509,6 +514,19 @@ const LeadList: React.FC = () => {
                             cursor: 'pointer'
                         }}
                     >🔌 Integrations</button>
+                    <button
+                        onClick={() => setViewMode('ad_generator')}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '8px',
+                            border: '1px solid #db2777',
+                            background: 'white',
+                            color: '#db2777',
+                            marginLeft: '0.5rem',
+                            fontWeight: 500,
+                            cursor: 'pointer'
+                        }}
+                    >🎬 Ad Creator</button>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button

@@ -134,3 +134,30 @@ export const mockLeads: Lead[] = [
         notes: []
     }
 ];
+
+export const mockSalesTeam: any[] = [
+    {
+        id: 'sp1',
+        name: 'Ed Ryan',
+        title: 'SVP, Business Development',
+        phone: '909-258-4585',
+        email: 'ed.ryan@ampac.com',
+        products: ['504', '7a']
+    },
+    {
+        id: 'sp2',
+        name: 'Mazen Zwin',
+        title: 'Vice President',
+        phone: '909-555-0102',
+        email: 'mazen@ampac.com',
+        products: ['504', 'Micro']
+    },
+    {
+        id: 'sp3',
+        name: 'Sarah Jenkins',
+        title: 'Business Development Officer',
+        phone: '909-555-0103',
+        email: 'sarah.j@ampac.com',
+        products: ['7a', 'Community Advantage']
+    }
+];
