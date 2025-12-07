@@ -8,7 +8,7 @@
     "watch": "tsc -w",
     "clean": "rimraf dist",
     "prestart": "npm run clean && npm run build",
-    "start": "func start",
+    "start": "func start --cors *",
     "test": "echo \"No tests yet...\""
   },
   "dependencies": {
@@ -17,9 +17,7 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "axios": "^1.13.2",
     "isomorphic-fetch": "^3.0.0",
-    "@leads/shared": "*"
-  },
-  "devDependencies": {
+    "@leads/shared": "*",
     "@types/node": "18.x",
     "azure-functions-core-tools": "^4.x",
     "rimraf": "^5.0.0",
