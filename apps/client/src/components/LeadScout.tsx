@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import type { Lead } from '@leads/shared';
 import {
     searchLeads,
-    getAvailableSources,
     type EnrichedLead,
-    type SearchDepth,
     type DataSource
 } from '../services/leadIntelligenceService';
 import { AdGenerator } from './AdGenerator';
@@ -20,16 +18,11 @@ export const LeadScout: React.FC<{ onAddLead: (lead: Lead) => void, onCancel: ()
     const [error, setError] = useState<string | null>(null);
     const [selectedForAd, setSelectedForAd] = useState<EnrichedLead | null>(null);
 
-    // New: Depth selector and source info
-    const [depth, setDepth] = useState<SearchDepth>('standard');
+    // Simplified state
     const [usedSources, setUsedSources] = useState<DataSource[]>([]);
     const [searchTime, setSearchTime] = useState(0);
-    const [availableSources, setAvailableSources] = useState<DataSource[]>([]);
 
-    // Check what sources are configured
-    useEffect(() => {
-        setAvailableSources(getAvailableSources());
-    }, []);
+
 
     const locations = [
         'Riverside, CA',
@@ -55,7 +48,7 @@ export const LeadScout: React.FC<{ onAddLead: (lead: Lead) => void, onCancel: ()
         setIsDemoMode(false);
 
         try {
-            const response = await searchLeads(searchQuery, location, depth);
+            const response = await searchLeads(searchQuery, location);
             setResults(response.leads);
             setIsDemoMode(response.isDemoMode);
             setUsedSources(response.sources);
@@ -137,20 +130,7 @@ export const LeadScout: React.FC<{ onAddLead: (lead: Lead) => void, onCancel: ()
             </div>
 
             <div className="search-section">
-                {/* Source Status Banner */}
-                {availableSources.length === 0 && (
-                    <div style={{
-                        padding: '0.75rem 1rem',
-                        background: 'rgba(253, 224, 71, 0.1)',
-                        border: '1px solid rgba(253, 224, 71, 0.2)',
-                        borderRadius: '6px',
-                        color: '#fef3c7',
-                        marginBottom: '1rem',
-                        fontSize: '0.85rem'
-                    }}>
-                        <strong>Demo Mode</strong> — No API keys configured. Add VITE_GOOGLE_PLACES_API_KEY for real results.
-                    </div>
-                )}
+
 
                 <div style={{
                     display: 'flex',
@@ -175,16 +155,7 @@ export const LeadScout: React.FC<{ onAddLead: (lead: Lead) => void, onCancel: ()
                             <option key={loc} value={loc}>{loc}</option>
                         ))}
                     </select>
-                    <select
-                        className="depth-select"
-                        value={depth}
-                        onChange={(e) => setDepth(e.target.value as SearchDepth)}
-                        title="Search Depth"
-                    >
-                        <option value="quick">Quick</option>
-                        <option value="standard">Standard</option>
-                        <option value="deep">Deep</option>
-                    </select>
+
                     <button
                         className="search-btn"
                         onClick={handleSearch}
@@ -402,7 +373,7 @@ export const LeadScout: React.FC<{ onAddLead: (lead: Lead) => void, onCancel: ()
                         <h3>Find Your Next Lead</h3>
                         <p>Search for SBA-eligible businesses in California, Nevada, or Arizona.</p>
                         <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.5rem' }}>
-                            Depth: Quick (Google only) | Standard (Google + Yelp + AI) | Deep (All sources)
+                            Powered by Firecrawl + GPT-4o
                         </p>
                     </div>
                 )}

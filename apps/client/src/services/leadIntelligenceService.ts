@@ -1,33 +1,10 @@
 /**
  * Lead Intelligence Service
- * Multi-source search with AI reasoning for real business leads
+ * Firecrawl + GPT Pipeline for High Quality Leads
  */
 
-// Search depth levels
-export type SearchDepth = 'quick' | 'standard' | 'deep';
-
 // Source types
-// Source types
-export type DataSource = 'google_places' | 'sos_api' | 'hunter_io' | 'ai_enriched';
-
-// Raw result from any source before AI processing
-export interface RawBusinessResult {
-    source: DataSource;
-    name: string;
-    address?: string;
-    city?: string;
-    state?: string;
-    phone?: string;
-    website?: string;
-    rating?: number;
-    reviewCount?: number;
-    categories?: string[];
-    placeId?: string;  // Google Places ID
-    sosEntityNumber?: string; // CA SOS Entity Number
-    sosStatus?: string; // Active, Suspended, etc.
-    hunterEmail?: string;
-    hunterConfidence?: number;
-}
+export type DataSource = 'firecrawl' | 'gpt_reasoning';
 
 // Enriched result after AI reasoning
 export interface EnrichedLead {
@@ -52,189 +29,81 @@ export interface EnrichedLead {
     sources: DataSource[];
     confidence: 'high' | 'medium' | 'low';
 
-    // Contact (if found)
+    // Contact (if found by AI)
     contactName?: string;
     contactRole?: string;
     contactEmail?: string;
-
-    // Verification
-    sosVerified?: boolean;
-    sosStatus?: string;
-    sosEntityNumber?: string;
-    hunterEmail?: string;
-    hunterConfidence?: number;
 }
 
 // API Keys from environment
-const SOS_API_KEY = import.meta.env.VITE_SOS_API_KEY || '';
-const HUNTER_API_KEY = import.meta.env.VITE_HUNTER_API_KEY || '';
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
+// Firecrawl is handled by backend proxy
 
-// Backend API URL for proxy (avoids CORS)
+// Backend API URL
 const BACKEND_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Check which sources are available
 export function getAvailableSources(): DataSource[] {
-    const sources: DataSource[] = [];
-    sources.push('google_places');
-    if (SOS_API_KEY) sources.push('sos_api');
-    if (HUNTER_API_KEY) sources.push('hunter_io');
-    sources.push('ai_enriched');
-    return sources;
+    return ['firecrawl', 'gpt_reasoning'];
 }
 
 // =====================================================
-// GOOGLE PLACES API (via Backend Proxy)
+// FIRECRAWL SEARCH (via Backend Proxy)
 // =====================================================
 
+interface FirecrawlResult {
+    url: string;
+    title: string;
+    content?: string; // Markdown or snippet
+    description?: string;
+}
 
-async function searchGooglePlaces(query: string, location: string): Promise<RawBusinessResult[]> {
+async function searchFirecrawl(query: string): Promise<FirecrawlResult[]> {
     try {
-        // Smart Query Logic: Append industry terms if generic
-        let smartQuery = query;
-        const lowerQuery = query.toLowerCase();
+        console.log('🔥 Searching Firecrawl via proxy:', query);
+        const url = `${BACKEND_API_URL}/api/search/firecrawl`;
 
-        // If query seems to be requesting 504 type businesses but is generic, add keywords
-        if (!lowerQuery.includes('shop') && !lowerQuery.includes('hotel') && !lowerQuery.includes('warehouse')) {
-            if (lowerQuery.includes('machine') || lowerQuery.includes('manufacturing')) {
-                smartQuery += " OR Machine Shop OR Manufacturer";
-            }
-        }
-
-        const fullQuery = `${smartQuery} in ${location}`;
-        const url = `${BACKEND_API_URL}/api/search/google?query=${encodeURIComponent(fullQuery)}`;
-
-        console.log('🔍 Searching Google via proxy:', url);
-
-        const response = await fetch(url);
+        const response = await fetch(url + `?query=${encodeURIComponent(query)}`);
 
         if (!response.ok) {
-            console.error('Google Proxy search error:', response.status);
+            console.error('Firecrawl Proxy search error:', response.status);
             return [];
         }
 
-        const data = await response.json();
+        const json = await response.json();
+        const data = json.data || [];
 
-        if (data.status === 'ZERO_RESULTS') {
-            console.log("No results found for", fullQuery);
-            return [];
-        }
-
-        if (data.status !== 'OK' && data.results === undefined) {
-            // Some proxies return results directly, others inside 'results'
-            // If we implemented the proxy correctly it returns { results: [] }
-            console.error('Google Places API status:', data.status || 'Unknown');
-            return [];
-        }
-
-        const results = data.results || [];
-
-        return results.slice(0, 15).map((place: any) => ({
-            source: 'google_places' as DataSource,
-            name: place.name,
-            address: place.formatted_address,
-            city: extractCity(place.formatted_address),
-            state: extractState(place.formatted_address),
-            phone: undefined, // Google Text Search often doesn't return phone, Details would needed
-            website: undefined,
-            rating: place.rating,
-            reviewCount: place.user_ratings_total,
-            categories: place.types || [],
-            placeId: place.place_id
+        // Map to simpler structure
+        return data.map((item: any) => ({
+            url: item.url,
+            title: item.title,
+            content: item.markdown || item.content || item.description || ''
         }));
+
     } catch (e) {
-        console.error('Google Places proxy search failed:', e);
+        console.error('Firecrawl search failed:', e);
         return [];
-    }
-}
-
-// =====================================================
-// CA SECRETARY OF STATE API
-// =====================================================
-async function searchSOS(name: string): Promise<RawBusinessResult | null> {
-    if (!SOS_API_KEY) return null;
-
-    try {
-        // Keyword Search
-        const url = `https://calico.sos.ca.gov/cbc/v1/api/BusinessEntityKeywordSearch?search-term=${encodeURIComponent(name)}`;
-
-        const response = await fetch(url, {
-            headers: {
-                'Ocp-Apim-Subscription-Key': SOS_API_KEY
-            }
-        });
-
-        if (!response.ok) return null;
-
-        const data = await response.json();
-        // Assuming data structure based on typical Azure APIM responses, need to verify actual shape
-        // For now, let's assume it returns a list and we take the best match
-        const bestMatch = data[0]; // Simplification
-
-        if (!bestMatch) return null;
-
-        return {
-            source: 'sos_api',
-            name: bestMatch.EntityName,
-            sosEntityNumber: bestMatch.EntityNumber,
-            sosStatus: bestMatch.EntityStatus,
-            // Add other fields if available
-        } as RawBusinessResult;
-
-    } catch (e) {
-        console.error('SOS search failed:', e);
-        return null;
-    }
-}
-
-// =====================================================
-// HUNTER.IO API
-// =====================================================
-async function searchHunter(domain: string): Promise<RawBusinessResult | null> {
-    if (!HUNTER_API_KEY) return null;
-
-    try {
-        const url = `https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}`;
-        const response = await fetch(url);
-
-        if (!response.ok) return null;
-
-        const data = await response.json();
-        const emails = data.data?.emails || [];
-
-        if (emails.length === 0) return null;
-
-        const bestEmail = emails[0];
-
-        return {
-            source: 'hunter_io',
-            name: domain, // Placeholder
-            hunterEmail: bestEmail.value,
-            hunterConfidence: bestEmail.confidence,
-            contactName: `${bestEmail.first_name} ${bestEmail.last_name}`,
-            contactRole: bestEmail.position
-        } as any; // Cast to any to merge later
-
-    } catch (e) {
-        console.error('Hunter search failed:', e);
-        return null;
     }
 }
 
 // =====================================================
 // AI REASONING LAYER
 // =====================================================
-async function aiEnrichAndReason(
-    rawResults: RawBusinessResult[],
+async function aiProcessFirecrawlResults(
+    results: FirecrawlResult[],
     query: string,
     location: string
 ): Promise<EnrichedLead[]> {
-    if (!OPENAI_API_KEY || rawResults.length === 0) {
-        // No AI available - return basic conversion
-        return rawResults.map(r => basicConvert(r));
+    if (!OPENAI_API_KEY || results.length === 0) {
+        return [];
     }
 
     try {
+        // Construct a context string from Firecrawl results
+        const searchContext = results.map((r, i) =>
+            `Result ${i + 1}:\nTitle: ${r.title}\nURL: ${r.url}\nExcerpt: ${r.content?.substring(0, 500)}...`
+        ).join('\n\n---\n\n');
+
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -242,56 +111,56 @@ async function aiEnrichAndReason(
                 'Authorization': `Bearer ${OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-                model: 'gpt-4o-mini',
+                model: 'gpt-4o', // Use powerful model for extraction
                 messages: [
                     {
                         role: 'system',
                         content: `You are a Senior SBA Loan Underwriter & Business Development Officer. 
-Your goal is to identify "High Quality" borrowers for SBA 504 and 7(a) loans from a raw list.
+Your goal is to extract valid business leads from the provided search results.
 
-HIGH QUALITY CRITERIA:
-- Established business (implied by reviews > 10 or generic legacy nature).
-- "Real" physical location (not a PO Box or virtual office).
-- Industry matches SBA preference (Manufacturing, Medical, Professional Services, Hotels).
+TARGET: High Quality Borrowers for SBA 504 (Real Estate/Equip) and 7(a) (Working Capital) loans.
 
-SBA FIT RULES:
-- **504 Loan** (Real Estate/Heavy Equipment): Look for Manufacturers, Machine Shops, Hotels, Medical Clinics, Warehouses.
-- **7(a) Loan** (Working Capital/Acquisition): Look for Restaurants, Retail, Service Businesses, Franchises, Dental practices.
-- **Both**: Medical practices often fit both (buying building vs buying practice).
+CRITERIA:
+- Must be a real operating business.
+- Exclude directories (Yelp, YellowPages) unless you can extract a specific business from the listing title/snippet.
+- Exclude government agencies, non-profits, or informational articles.
 
-SCORING (1-100):
-- 90+: Perfect 504 candidate (e.g., Manufacturer with good reviews).
-- 70-89: Good solid local business, likely 7(a) or small 504.
-- 40-69: Retail/Restaurant (higher risk, but doable).
-- <40: Vape shops, adult entertainment, speculative, or bad reviews.
+OUTPUT FORMAT: JSON Array of objects.
+Fields:
+- company: Business Name
+- legalName: (if apparent)
+- address: (Infer city/state from context if full address missing)
+- city: (Required)
+- state: (Required)
+- website: (URL from result)
+- industry: (e.g. "Manufacturing", "Medical")
+- sbaFit: "504", "7a", "Both", or "Unknown"
+- sbaFitReason: One sentence justification.
+- leadScore: 1-100 (based on likelihood of needing capital & business quality)
+- confidence: "high", "medium", "low" (based on data quality)
+- estimatedRevenue: (Guess based on industry/size, e.g. "$2M+")
+- estimatedEmployees: (Guess, e.g. "10-20")
 
-Output JSON array of enriched leads.`
+If a result is a "List of..." or directory, try to extract specific companies mentioned if possible, otherwise skip it.`
                     },
                     {
                         role: 'user',
-                        content: `Query: "${query}" in ${location}
-Raw Results: ${JSON.stringify(rawResults.map(r => ({ name: r.name, type: r.categories, rating: r.rating, reviews: r.reviewCount })), null, 2)}
+                        content: `Search Query: "${query}" in ${location}
 
-Return JSON array:
-- company, legalName, address, city, state
-- industry
-- sbaFit (504, 7a, Both, Unknown), sbaFitReason (Be specific: "Manufacturer suitable for 504 RE purchase")
-- estimatedRevenue (Give a realistic range based on industry/size ex: "$1M - $5M")
-- estimatedEmployees (Estimate based on type ex: "10-20")
-- leadScore (1-100), confidence
-- sources (pass through)
+SEARCH RESULTS (Firecrawl):
+${searchContext}
 
-Strict JSON only.`
+Extract and analyze leads. Return strict JSON.`
                     }
                 ],
                 max_tokens: 3000,
-                temperature: 0.2
+                temperature: 0.1
             })
         });
 
         if (!response.ok) {
             console.error('OpenAI reasoning failed:', response.status);
-            return rawResults.map(r => basicConvert(r));
+            return [];
         }
 
         const data = await response.json();
@@ -301,72 +170,31 @@ Strict JSON only.`
             const enriched = JSON.parse(content.replace(/```json\n?|\n?```/g, ''));
             return enriched.map((e: any) => ({
                 id: crypto.randomUUID(),
-                company: e.company || e.name,
+                company: e.company || 'Unknown',
                 legalName: e.legalName,
-                address: e.address || '',
+                address: e.address || `${e.city}, ${e.state}`,
                 city: e.city || location.split(',')[0],
                 state: e.state || 'CA',
                 phone: e.phone,
                 website: e.website,
-                industry: e.industry || 'Business Services',
+                industry: e.industry || 'Business',
                 sbaFit: e.sbaFit || 'Unknown',
-                sbaFitReason: e.sbaFitReason || 'Insufficient data',
+                sbaFitReason: e.sbaFitReason || 'ai assessment',
                 estimatedRevenue: e.estimatedRevenue,
                 estimatedEmployees: e.estimatedEmployees,
                 leadScore: e.leadScore || 50,
-                sources: e.sources || ['google_places'],
+                sources: ['firecrawl', 'gpt_reasoning'],
                 confidence: e.confidence || 'medium',
                 contactName: e.contactName,
-                contactRole: e.contactRole,
-                contactEmail: e.contactEmail,
-                sosEntityNumber: e.sosEntityNumber,
-                sosStatus: e.sosStatus,
-                hunterEmail: e.hunterEmail,
-                hunterConfidence: e.hunterConfidence
             }));
         } catch {
             console.error('Failed to parse AI response');
-            return rawResults.map(r => basicConvert(r));
+            return [];
         }
     } catch (e) {
         console.error('AI enrichment failed:', e);
-        return rawResults.map(r => basicConvert(r));
+        return [];
     }
-}
-
-// Basic conversion without AI
-function basicConvert(raw: RawBusinessResult): EnrichedLead {
-    return {
-        id: crypto.randomUUID(),
-        company: raw.name,
-        address: raw.address || '',
-        city: raw.city || '',
-        state: raw.state || 'CA',
-        phone: raw.phone,
-        website: raw.website,
-        industry: raw.categories?.[0] || 'Business',
-        sbaFit: 'Unknown',
-        sbaFitReason: 'No AI analysis available',
-        leadScore: 50,
-        sources: [raw.source],
-        confidence: 'low',
-        sosEntityNumber: raw.sosEntityNumber,
-        sosStatus: raw.sosStatus,
-        hunterEmail: raw.hunterEmail,
-        hunterConfidence: raw.hunterConfidence
-    };
-}
-
-// Helper functions
-function extractCity(address: string): string {
-    const parts = address?.split(',') || [];
-    return parts[1]?.trim() || '';
-}
-
-function extractState(address: string): string {
-    const parts = address?.split(',') || [];
-    const stateZip = parts[2]?.trim() || '';
-    return stateZip.split(' ')[0] || 'CA';
 }
 
 // =====================================================
@@ -383,71 +211,29 @@ export interface SearchResult {
 export async function searchLeads(
     query: string,
     location: string,
-    depth: SearchDepth = 'standard'
+    _depth: any = 'standard' // Deprecated param, kept for signature comp
 ): Promise<SearchResult> {
     const startTime = Date.now();
-    const usedSources: DataSource[] = [];
-    const rawResults: RawBusinessResult[] = [];
 
-    // 1. Discovery (Google Places via Proxy)
-    try {
-        const googleResults = await searchGooglePlaces(query, location);
-        rawResults.push(...googleResults);
-        if (googleResults.length > 0) usedSources.push('google_places');
-    } catch (e) {
-        console.error('Discovery failed', e);
+    // 1. Firecrawl Search
+    const firecrawlResults = await searchFirecrawl(`${query} ${location}`);
+
+    if (firecrawlResults.length === 0) {
+        return {
+            leads: [],
+            sources: ['firecrawl'],
+            searchTime: Date.now() - startTime,
+            isDemoMode: false,
+            error: "No results found from Firecrawl"
+        };
     }
 
-    // 2. Verification & Enrichment (Parallel)
-    if (depth !== 'quick') {
-        const enrichmentPromises = rawResults.map(async (biz) => {
-            // SOS Verification
-            if (SOS_API_KEY) {
-                const sosResult = await searchSOS(biz.name);
-                if (sosResult) {
-                    biz.sosEntityNumber = sosResult.sosEntityNumber;
-                    biz.sosStatus = sosResult.sosStatus;
-                    if (!usedSources.includes('sos_api')) usedSources.push('sos_api');
-                }
-            }
-
-            // Hunter.io (if website exists)
-            if (HUNTER_API_KEY && biz.website) {
-                try {
-                    const domain = new URL(biz.website).hostname;
-                    const hunterResult = await searchHunter(domain);
-                    if (hunterResult) {
-                        biz.hunterEmail = hunterResult.hunterEmail;
-                        biz.hunterConfidence = hunterResult.hunterConfidence;
-                        // @ts-ignore
-                        biz.contactName = hunterResult.contactName;
-                        // @ts-ignore
-                        biz.contactRole = hunterResult.contactRole;
-                        if (!usedSources.includes('hunter_io')) usedSources.push('hunter_io');
-                    }
-                } catch (e) { /* Invalid URL */ }
-            }
-            return biz;
-        });
-
-        await Promise.all(enrichmentPromises);
-    }
-
-    // 3. AI Analysis
-    let leads: EnrichedLead[];
-    if (depth !== 'quick' && OPENAI_API_KEY) {
-        leads = await aiEnrichAndReason(rawResults, query, location);
-        usedSources.push('ai_enriched');
-    } else {
-        leads = rawResults.map(r => basicConvert(r));
-    }
-
-    // Sort by lead score
-    leads.sort((a, b) => b.leadScore - a.leadScore);
+    // 2. GPT Extraction & Reasoning
+    const leads = await aiProcessFirecrawlResults(firecrawlResults, query, location);
 
     return {
-        leads: leads.slice(0, 10),
-        sources: usedSources,
+        leads: leads,
+        sources: ['firecrawl', 'gpt_reasoning'],
         searchTime: Date.now() - startTime,
         isDemoMode: false
     };
