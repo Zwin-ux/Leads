@@ -244,10 +244,9 @@ async function aiEnrichAndReason(
             body: JSON.stringify({
                 model: 'gpt-4o-mini',
                 messages: [
-                    messages: [
-                        {
-                            role: 'system',
-                            content: `You are a Senior SBA Loan Underwriter & Business Development Officer. 
+                    {
+                        role: 'system',
+                        content: `You are a Senior SBA Loan Underwriter & Business Development Officer. 
 Your goal is to identify "High Quality" borrowers for SBA 504 and 7(a) loans from a raw list.
 
 HIGH QUALITY CRITERIA:
@@ -267,10 +266,10 @@ SCORING (1-100):
 - <40: Vape shops, adult entertainment, speculative, or bad reviews.
 
 Output JSON array of enriched leads.`
-                        },
-                        {
-                            role: 'user',
-                            content: `Query: "${query}" in ${location}
+                    },
+                    {
+                        role: 'user',
+                        content: `Query: "${query}" in ${location}
 Raw Results: ${JSON.stringify(rawResults.map(r => ({ name: r.name, type: r.categories, rating: r.rating, reviews: r.reviewCount })), null, 2)}
 
 Return JSON array:
@@ -283,10 +282,10 @@ Return JSON array:
 - sources (pass through)
 
 Strict JSON only.`
-                        }
-                    ],
-                    max_tokens: 3000,
-                    temperature: 0.2
+                    }
+                ],
+                max_tokens: 3000,
+                temperature: 0.2
             })
         });
 
