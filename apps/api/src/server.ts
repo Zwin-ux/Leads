@@ -40,6 +40,7 @@ app.get('/health', (req, res) => {
 
 // --- UNDERWRITING ROUTES ---
 import { financialAgent } from './services/financialAgent';
+import { councilAgent } from './services/councilAgent';
 
 app.post('/api/underwriting/financials', (req, res) => {
     try {
@@ -47,6 +48,28 @@ app.post('/api/underwriting/financials', (req, res) => {
         res.json(result);
     } catch (e: any) {
         console.error("Financial Calc Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/underwriting/council', async (req, res) => {
+    try {
+        const { businessName, financials } = req.body;
+
+        // 1. Get "Financial Truth" (Ratios) first
+        // We reuse the deterministic logic to ensure the AI has accurate math.
+        const mathResult = financialAgent.calculateRatios(financials);
+
+        // 2. Convene the Council
+        const councilResult = await councilAgent.conveneCouncil({
+            businessName: businessName || "Unknown Business",
+            financials: financials,
+            ratios: mathResult.ratios
+        });
+
+        res.json(councilResult);
+    } catch (e: any) {
+        console.error("Council Error:", e);
         res.status(500).json({ error: e.message });
     }
 });

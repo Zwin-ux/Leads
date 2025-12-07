@@ -13,6 +13,7 @@
     "@azure/msal-browser": "^4.26.2",
     "@azure/msal-react": "^3.0.22",
     "@leads/shared": "*",
+    "lucide-react": "^0.556.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-dropzone": "^14.3.8",

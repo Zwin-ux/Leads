@@ -8,8 +8,26 @@ import { CaEntityCheck } from './CaEntityCheck';
 import { DealEnrichmentCard } from '../DealEnrichmentCard';
 import { SBAEligibilityScanner } from '../SBAEligibilityScanner';
 import { underwritingService, type UnderwritingAnalysis } from '../../services/underwritingService';
-
 import { RiskScorecard } from './RiskScorecard';
+import { CouncilView } from './CouncilView';
+
+interface CouncilOpinion {
+    persona: "Skeptic" | "Deal Maker" | "Chairman";
+    recommendation: "Approve" | "Decline" | "Review";
+    score: number;
+    reasoning: string;
+    keyPoints: string[];
+}
+
+interface CouncilResult {
+    skeptic: CouncilOpinion;
+    dealMaker: CouncilOpinion;
+    chairman: CouncilOpinion;
+}
+
+
+
+
 
 // Types for AI Result (Mirrors Backend)
 interface ScoreReasoning {
@@ -34,11 +52,35 @@ interface DealWorkspaceProps {
 
 export const DealWorkspace: React.FC<DealWorkspaceProps> = ({ lead, onClose }) => {
     const [analysis, setAnalysis] = useState<UnderwritingAnalysis | null>(null);
-    const [activeTab, setActiveTab] = useState<'financials' | 'stips' | 'sba' | 'memo' | 'diligence'>('financials');
+    const [activeTab, setActiveTab] = useState<'financials' | 'stips' | 'sba' | 'memo' | 'diligence' | 'council'>('financials');
     const [showScorecard, setShowScorecard] = useState(false);
 
     const [aiResult, setAiResult] = useState<RiskScorecardAI | null>(null);
+    const [councilResult, setCouncilResult] = useState<CouncilResult | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+    const handleConveneCouncil = async () => {
+        if (!analysis) return;
+        setIsAnalyzing(true);
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+            const payload = {
+                businessName: lead.company,
+                financials: analysis.financials
+            };
+
+            const res = await axios.post(`${API_URL}/api/underwriting/council`, payload);
+            setCouncilResult(res.data);
+            setActiveTab('council');
+
+        } catch (err: any) {
+            console.error("Council Failed:", err);
+            alert("The Council could not be convened. Check connection.");
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
 
     useEffect(() => {
         setAnalysis(underwritingService.getAnalysis(lead.id));
@@ -168,6 +210,15 @@ Recommendation: [APPROVE / DECLINE]
                     >
                         💰 Financial Analysis
                     </button>
+                    {councilResult && (
+                        <button
+                            className={`nav-item ${activeTab === 'council' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('council')}
+                            style={{ color: '#06b6d4' }}
+                        >
+                            ⚖️ Council Verdict
+                        </button>
+                    )}
                     <button
                         className={`nav-item ${activeTab === 'stips' ? 'active' : ''}`}
                         onClick={() => setActiveTab('stips')}
@@ -202,7 +253,20 @@ Recommendation: [APPROVE / DECLINE]
                 <div className="workspace-content" style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
                     {activeTab === 'financials' && (
                         <div>
-                            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+                            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                <button
+                                    className="btn-secondary"
+                                    onClick={handleConveneCouncil}
+                                    disabled={isAnalyzing}
+                                    style={{
+                                        background: isAnalyzing ? '#94a3b8' : '#0f172a',
+                                        color: 'white',
+                                        border: '1px solid #334155',
+                                        display: 'flex', gap: '0.5rem', alignItems: 'center'
+                                    }}
+                                >
+                                    {isAnalyzing ? 'Convening...' : '⚖️ Convene Council'}
+                                </button>
                                 <button
                                     className="btn-primary"
                                     onClick={handleAutoCalc}
@@ -214,6 +278,16 @@ Recommendation: [APPROVE / DECLINE]
                             </div>
                             <FinancialsGrid financials={analysis.financials} onChange={handleFinancialChange} />
                         </div>
+                    )}
+
+                    {activeTab === 'council' && councilResult && (
+                        <CouncilView
+                            result={councilResult}
+                            onApprove={(finalScore) => {
+                                handleRiskUpdate(finalScore, councilResult.dealMaker.keyPoints, councilResult.skeptic.keyPoints);
+                                alert(`Council Verdict Adopted!\nRisk Score updated to ${finalScore}/5`);
+                            }}
+                        />
                     )}
 
                     {activeTab === 'stips' && (
