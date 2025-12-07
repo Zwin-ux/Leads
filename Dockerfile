@@ -31,6 +31,6 @@ RUN npm install -g serve
 COPY --from=build /app/apps/client/dist ./dist
 # Create a minimal package.json so 'npm start' works (Railway default)
 # We use ${PORT:-3000} to let Railway set the port, defaulting to 3000
-RUN echo '{"scripts": {"start": "serve -s dist -l tcp://0.0.0.0:${PORT:-3000}"}}' > package.json
+RUN echo '{"scripts": {"start": "serve -s dist -l tcp://0.0.0.0:${PORT:-3000}", "preview": "sh -c \"npm start\""}}' > package.json
 EXPOSE 3000
 CMD ["npm", "start"]
