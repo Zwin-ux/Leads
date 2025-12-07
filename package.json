@@ -4,5 +4,11 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/client",
+    "build": "npm run build -w packages/shared && npm run build -w apps/client",
+    "preview": "npm run preview -w apps/client",
+    "start": "npm run preview -w apps/client"
+  }
 }
