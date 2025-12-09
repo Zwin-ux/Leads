@@ -1,6 +1,8 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import type { Lead } from "@leads/shared";
 
+// Create a single instance of Prisma Client
 // Create a single instance of Prisma Client
 const prisma = new PrismaClient();
 
@@ -77,13 +79,14 @@ export class LeadRepository {
         // Prisma createMany is faster
         try {
             await prisma.lead.createMany({
-                data: leads.map(lead => {
+                data: leads.map(l => {
+                    const lead = l as any;
                     const { id, ...rest } = lead;
                     return {
                         ...rest,
-                        financials: lead.financials as any,
-                        aiAnalysis: lead.aiAnalysis as any,
-                        stips: lead.stips as any
+                        financials: lead.financials,
+                        aiAnalysis: lead.aiAnalysis,
+                        stips: lead.stips
                     };
                 })
             });

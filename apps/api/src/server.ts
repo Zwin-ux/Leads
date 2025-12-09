@@ -2,14 +2,17 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import axios from 'axios';
-import { leadRepository } from './services/leadRepository'; // Assuming this exists or will need checking
-import type { Lead } from "@leads/shared";
+import { leadRepository } from './services/leadRepository';
+import { brainService } from './services/brainService';
+import { graphService } from './services/graphService';
+import { graphToolbox } from './services/graphToolbox';
+import type { Lead, AdRequest, SalesPerson } from "@leads/shared";
 
 // Load env vars
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // --- NUCLEAR CORS SETUP ---
 // We are manually injecting headers to ensure they are ALWAYS present.
@@ -161,6 +164,200 @@ app.put('/leads', async (req, res, next) => {
         res.json(updated);
     } catch (e) {
         next(e);
+    }
+});
+
+// --- PORTED AZURE FUNCTIONS ---
+
+// Mock Sales Team Data
+const SALES_TEAM: Partial<SalesPerson>[] = [
+    { id: 'sp1', name: 'Ed Ryan', title: 'SVP, Business Development', phone: '909-258-4585', email: 'ed.ryan@ampac.com' },
+    { id: 'sp3', name: 'Sarah Jenkins', title: 'Business Development Officer', phone: '909-555-0103', email: 'sarah.j@ampac.com' }
+];
+
+app.post('/generateAd', async (req, res) => {
+    try {
+        console.log("Generating ad script...");
+        const body = req.body as AdRequest;
+        const { product, goal, tone, length, salesPersonId, notes } = body;
+
+        let salesPersonContext = "Contact: AmPac Business Capital (909) 915-1706";
+        if (salesPersonId) {
+            const sp = SALES_TEAM.find(s => s.id === salesPersonId);
+            if (sp) {
+                salesPersonContext = `
+                Call to Action Contact:
+                Name: ${sp.name}
+                Title: ${sp.title}
+                Phone: ${sp.phone}
+                Email: ${sp.email}
+                `;
+            }
+        }
+
+        let targetContext = "";
+        if (body.targetBusiness) {
+            targetContext = `
+            Target Business Context:
+            Name: ${body.targetBusiness.name}
+            Industry: ${body.targetBusiness.industry || 'Unknown'}
+            Location: ${body.targetBusiness.city || ''}, ${body.targetBusiness.state || ''}
+            
+            Instruction: Tailor the script specifically to address pain points common in the ${body.targetBusiness.industry} industry. 
+            Mention the business name "${body.targetBusiness.name}" naturally in the script if appropriate.
+            `;
+        }
+
+        const prompt = `
+        Create a ${length} video ad script for AmPac Business Capital.
+        Product: ${product}
+        Goal: ${goal}
+        Tone: ${tone}
+        ${notes ? `Additional Notes: ${notes}` : ''}
+        ${targetContext}
+        ${salesPersonContext}
+
+        Format Requirements:
+        - Return strictly valid JSON.
+        - Structure: { "hooks": ["..."], "beats": ["..."], "caption": "..." }
+        - Hooks: 3 punchy opening lines options.
+        - Beats: The visual/audio flow of the ad (step by step).
+        - Caption: A social media caption with hashtags.
+        `;
+
+        let result;
+        try {
+            result = await brainService.generateAdScript({ prompt });
+        } catch (e) {
+            console.log("Brain service failed, using fallback mock.");
+            result = {
+                hooks: [
+                    "Stop renting, start owning.",
+                    "The SBA 504 loan uses your rent money to buy your building.",
+                    "AmPac makes buying your own building easy."
+                ],
+                beats: [
+                    "Visual: Business owner looking at a 'For Lease' sign frustrate.",
+                    "Audio: Tired of rent hikes killing your profits?",
+                    "Visual: AmPac logo slides in with a confident handshake.",
+                    "Audio: With AmPac's SBA 504 Program, you can buy your building with just 10% down.",
+                    `Visual: Text appears - Call ${salesPersonContext.split('\n')[2]?.split(':')[1]?.trim() || 'AmPac'} today.`,
+                    "Audio: Stop renting. Start building wealth."
+                ],
+                caption: `Why rent when you can own? 🏢 The SBA 504 loan helps you buy your business property with low down payments. Call us today! #SmallBusiness #AmPac #SBA504`
+            };
+        }
+
+        res.json(result);
+    } catch (error: any) {
+        console.error(`Error generating ad: ${error}`);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+app.post('/processLead', async (req, res) => {
+    try {
+        console.log("Processing lead request");
+        const { lead, action, accessToken, toolName, args } = req.body;
+
+        if (!lead || !action) {
+            return res.status(400).send("Missing lead or action");
+        }
+
+        let result: any = {};
+
+        if (action === "getNextAction") {
+            const nextAction = await brainService.getNextAction(lead);
+            result = { nextAction };
+        } else if (action === "sendEmail") {
+            if (!accessToken) return res.status(401).send("Missing access token");
+            const content = await brainService.generateEmail(lead, "intro");
+            result = { emailContent: content };
+        } else if (action === "analyzeDeal") {
+            const analysis = await brainService.analyzeDeal(lead);
+            result = { analysis };
+        } else if (action === "executeGraphTool") {
+            if (!accessToken) return res.status(401).send("Missing access token");
+            if (!toolName || !args) return res.status(400).send("Missing toolName or args");
+
+            try {
+                const toolResult = await graphToolbox.executeTool(accessToken, toolName, args);
+                result = { toolResult };
+            } catch (err: any) {
+                return res.status(500).send(`Tool execution failed: ${err.message}`);
+            }
+        } else if (action === "getGraphTools") {
+            result = { tools: graphToolbox.getTools() };
+        }
+
+        res.json(result);
+    } catch (error: any) {
+        console.error(`Error processing lead: ${error.message}`);
+        res.status(500).send(error.message);
+    }
+});
+
+app.post('/research', async (req, res) => {
+    try {
+        const { query, type } = req.body;
+        const SERPAPI_KEY = process.env.SERPAPI_KEY || "demo_key";
+
+        if (!query) return res.status(400).send("Missing query");
+
+        if (SERPAPI_KEY === "demo_key") {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (type === 'business') {
+                return res.json({
+                    summary: `(Mock) ${query} is a verified business in the local sector.`,
+                    headcount: "10-50 employees (est)",
+                    flags: ["No recent bankruptcies", "Active entity"],
+                    news: "Featured in local news for community service."
+                });
+            } else {
+                return res.json({
+                    winRate: "High (est. 80%)",
+                    speed: "Fast (avg 25 days)",
+                    leverage: "Known for SBA 504 deals in this region."
+                });
+            }
+        }
+
+        const response = await axios.get("https://serpapi.com/search", {
+            params: {
+                engine: "google",
+                q: query,
+                api_key: SERPAPI_KEY,
+                num: 3
+            }
+        });
+
+        const results = response.data;
+        if (type === 'business') {
+            const snippet = results.organic_results?.[0]?.snippet || "No summary found.";
+            const title = results.organic_results?.[0]?.title || "";
+            const knowledgeGraph = results.knowledge_graph;
+            const revenue = knowledgeGraph?.revenue || "Unknown";
+            const owner = knowledgeGraph?.founder || knowledgeGraph?.ceo || "Unknown";
+
+            res.json({
+                summary: `${title}: ${snippet}`,
+                headcount: "Check LinkedIn for exact numbers",
+                flags: ["Verify entity status manually"],
+                revenue: revenue,
+                owner: owner,
+                news: results.news_results?.[0]?.title || "No recent news found."
+            });
+        } else {
+            const snippet = results.organic_results?.[0]?.snippet || "No public profile found.";
+            res.json({
+                winRate: "Unknown (Requires internal data)",
+                speed: "Unknown",
+                leverage: `Public info: ${snippet}`
+            });
+        }
+    } catch (error: any) {
+        console.error(`Error fetching research: ${error}`);
+        res.status(500).send("Failed to fetch research data");
     }
 });
 

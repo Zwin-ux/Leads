@@ -185,6 +185,16 @@ export interface Lead {
     createdBy?: string;
     createdAt?: string;
     updatedAt?: string;
+
+    // Legacy / Repository Fields (Ported from Azure Functions/Prisma)
+    address?: string; // Business Address
+    state?: string;
+    zip?: string;
+    source?: string;
+    status?: string | 'new';
+    financials?: any;
+    aiAnalysis?: any;
+    stips?: any;
 }
 
 // Closing checklist item (Processor workflow)

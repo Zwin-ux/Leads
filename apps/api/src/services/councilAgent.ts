@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import OpenAI from "openai";
 
 // Data Models
@@ -26,7 +27,8 @@ export class CouncilAgent {
 
     constructor() {
         // Fallback or use env
-        const apiKey = process.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+        const apiKey = process.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "missing_key";
+        if (apiKey === "missing_key") console.warn("WARNING: OPENAI_API_KEY missing. CouncilAgent will fail on use.");
         this.openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: false });
     }
 
