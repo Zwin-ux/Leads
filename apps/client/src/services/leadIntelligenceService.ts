@@ -40,7 +40,9 @@ const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
 // Firecrawl is handled by backend proxy
 
 // Backend API URL
-const BACKEND_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Backend API URL
+const envUrl = import.meta.env.VITE_API_URL;
+const BACKEND_API_URL = (envUrl && envUrl.startsWith('http')) ? envUrl : 'http://localhost:3001';
 
 // Check which sources are available
 export function getAvailableSources(): DataSource[] {
@@ -62,6 +64,7 @@ async function searchFirecrawl(query: string): Promise<FirecrawlResult[]> {
     try {
         console.log('🔥 Searching Firecrawl via proxy:', query);
         const url = `${BACKEND_API_URL}/api/search/firecrawl`;
+        console.log("🔥 Fetching Firecrawl URL:", url);
 
         const response = await fetch(url + `?query=${encodeURIComponent(query)}`);
 
