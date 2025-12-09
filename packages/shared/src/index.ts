@@ -195,6 +195,11 @@ export interface Lead {
     financials?: any;
     aiAnalysis?: any;
     stips?: any;
+
+    // Processing Workflow
+    processorId?: string;
+    processingPriority?: 'High' | 'Normal' | 'Low';
+    targetClosingDate?: string;
 }
 
 // Closing checklist item (Processor workflow)

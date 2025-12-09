@@ -35,6 +35,12 @@ model Lead {
   aiAnalysis    Json?
   stips         Json?
   
+  // Processing Workflow
+  processorId        String?
+  processingPriority String?
+  targetClosingDate  String?
+  closingItems       Json?
+  
   // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

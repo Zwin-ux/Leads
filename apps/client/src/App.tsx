@@ -3,6 +3,7 @@ import { authService } from "./services/authService";
 import type { User } from "./services/authService";
 import LeadDetail from "./components/LeadDetail";
 import LeadList from "./components/LeadList";
+import { ProcessingQueueView } from "./views/ProcessingQueueView";
 import { DevRoleSwitcher } from "./components/DevRoleSwitcher";
 import { FeedbackWidget } from "./components/FeedbackWidget";
 import logo from "./assets/ampac-logo-v2.png";
@@ -12,6 +13,7 @@ import './App.css';
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isExcel, setIsExcel] = useState(false);
+  const [currentView, setCurrentView] = useState<'list' | 'processing'>('list');
 
   // Login Form State
   const [email, setEmail] = useState("");
@@ -71,6 +73,7 @@ function App() {
     setUser(null);
     setEmail("");
     setPassword("");
+    setCurrentView("list");
     // We do NOT lock the site on logout, just the user session
   };
 
@@ -142,11 +145,31 @@ function App() {
     );
   }
 
+  const showProcessingBtn = user.role === 'admin' || user.role === 'processor' || user.role === 'manager';
+
   return (
     <div className="App">
       <div className="app-bar">
-        <div className="logo-container" style={{ marginRight: 'auto', display: 'flex', alignItems: 'center' }}>
-          <img src={logo} alt="AmPac" style={{ height: '48px' }} />
+        <div className="logo-container" style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <img src={logo} alt="AmPac" style={{ height: '48px' }} onClick={() => setCurrentView('list')} className="cursor-pointer" />
+
+          <div className="nav-links flex gap-4">
+            <button
+              onClick={() => setCurrentView('list')}
+              className={`text-sm px-3 py-1 rounded ${currentView === 'list' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
+            >
+              Leads
+            </button>
+
+            {showProcessingBtn && (
+              <button
+                onClick={() => setCurrentView('processing')}
+                className={`text-sm px-3 py-1 rounded ${currentView === 'processing' ? 'bg-blue-600/20 text-blue-300' : 'text-gray-400 hover:text-white'}`}
+              >
+                Processing Queue
+              </button>
+            )}
+          </div>
         </div>
         <div className="user-info">
           <span className="user-name">{user.name}</span>
@@ -154,7 +177,14 @@ function App() {
         </div>
         <button onClick={handleLogout} className="logout-btn">Sign Out</button>
       </div>
-      {isExcel ? <LeadDetail /> : <LeadList />}
+
+      {/* Content Area */}
+      {isExcel ? (
+        <LeadDetail /> // Minimal view for Excel
+      ) : (
+        currentView === 'processing' ? <ProcessingQueueView /> : <LeadList />
+      )}
+
       <DevRoleSwitcher />
       <FeedbackWidget />
     </div>
