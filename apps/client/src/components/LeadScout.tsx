@@ -80,6 +80,13 @@ export const LeadScout: React.FC<{ onAddLead: (lead: Lead) => void, onCancel: ()
             stage: 'New',
             dealStage: 'Prospect',
             loanProgram: business.sbaFit === 'Unknown' ? 'Unknown' : business.sbaFit === 'Both' ? '504' : business.sbaFit || 'Unknown',
+
+            // BDO Strict Saving
+            sbaFit: business.sbaFit,
+            leadScore: business.leadScore,
+            estimatedRevenue: business.estimatedRevenue,
+            estimatedEmployees: business.estimatedEmployees,
+
             owner: 'Unassigned',
             lastContactDate: 'Never',
             notes: [{

@@ -51,14 +51,51 @@ export class GraphService {
             .then((res) => res.value);
     }
 
-    async createEvent(accessToken: string, subject: string, start: string, end: string): Promise<void> {
+    async createEvent(
+        accessToken: string,
+        subject: string,
+        start: string,
+        end: string,
+        options?: {
+            attendees?: string[];
+            location?: string;
+            body?: string;
+            isOnlineMeeting?: boolean;
+        }
+    ): Promise<any> {
         const client = this.getClient(accessToken);
-        const event = {
+        const event: any = {
             subject: subject,
             start: { dateTime: start, timeZone: "UTC" },
-            end: { dateTime: end, timeZone: "UTC" }
+            end: { dateTime: end, timeZone: "UTC" },
+            isOnlineMeeting: options?.isOnlineMeeting ?? false,
+            onlineMeetingProvider: options?.isOnlineMeeting ? "teamsForBusiness" : undefined
         };
-        await client.api('/me/events').post(event);
+
+        if (options?.attendees?.length) {
+            event.attendees = options.attendees.map(email => ({
+                emailAddress: { address: email },
+                type: "required"
+            }));
+        }
+
+        if (options?.location) {
+            event.location = { displayName: options.location };
+        }
+
+        if (options?.body) {
+            event.body = {
+                contentType: "html",
+                content: options.body
+            };
+        }
+
+        const result = await client.api('/me/events').post(event);
+        return {
+            id: result.id,
+            webLink: result.webLink,
+            onlineMeeting: result.onlineMeeting
+        };
     }
 
     async findMeetingTimes(accessToken: string, attendees: string[], duration: string = "PT30M"): Promise<any> {
@@ -77,6 +114,31 @@ export class GraphService {
         return await client.api('/me/findMeetingTimes').post(body);
     }
 
+    async getAvailableSlots(accessToken: string): Promise<string[]> {
+        // Find times for just ME (no attendees) to offer to client
+        const result = await this.findMeetingTimes(accessToken, [], "PT30M");
+        const slots: any[] = result.meetingTimeSuggestions || [];
+
+        return slots.slice(0, 3).map(s => {
+            const date = new Date(s.meetingTimeSlot.start.dateTime);
+            return date.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+        });
+    }
+
+    async listEmailsFrom(accessToken: string, email: string): Promise<string[]> {
+        const client = this.getClient(accessToken);
+        // Filter by specific sender
+        const response = await client.api('/me/messages')
+            .filter(`from/emailAddress/address eq '${email}'`)
+            .top(3)
+            .select('subject,bodyPreview,receivedDateTime')
+            .get();
+
+        return response.value.map((m: any) =>
+            `[${new Date(m.receivedDateTime).toLocaleDateString()}] ${m.subject}: ${m.bodyPreview}`
+        );
+    }
+
     // --- Drive ---
     async uploadFile(accessToken: string, fileName: string, content: any): Promise<any> {
         const client = this.getClient(accessToken);
@@ -92,6 +154,44 @@ export class GraphService {
         const client = this.getClient(accessToken);
         const response = await client.api(`/me/drive/items/${folderId}/children`).get();
         return response.value;
+    }
+
+    async createFolder(accessToken: string, parentId: string = 'root', folderName: string): Promise<any> {
+        const client = this.getClient(accessToken);
+        const driveItem = {
+            name: folderName,
+            folder: {},
+            "@microsoft.graph.conflictBehavior": "rename"
+        };
+        return await client.api(`/me/drive/items/${parentId}/children`).post(driveItem);
+    }
+
+    async createLeadStructure(accessToken: string, companyName: string): Promise<any> {
+        try {
+            // 1. Ensure 'Leads' root folder exists
+            const rootChildren = await this.listDriveItems(accessToken, 'root');
+            let leadsFolder = rootChildren.find((i: any) => i.name === 'Leads');
+            if (!leadsFolder) {
+                leadsFolder = await this.createFolder(accessToken, 'root', 'Leads');
+            }
+
+            // 2. Create Company Folder
+            const companyFolder = await this.createFolder(accessToken, leadsFolder.id, companyName);
+
+            // 3. Create Subfolders
+            await this.createFolder(accessToken, companyFolder.id, '1. Financials');
+            await this.createFolder(accessToken, companyFolder.id, '2. Legal');
+            await this.createFolder(accessToken, companyFolder.id, '3. Collateral');
+
+            return {
+                success: true,
+                path: `/Leads/${companyName}`,
+                webUrl: companyFolder.webUrl
+            };
+        } catch (error: any) {
+            console.error("Failed to create lead structure:", error);
+            throw new Error(`Folder creation failed: ${error.message}`);
+        }
     }
 
     // --- Contacts ---
@@ -126,6 +226,46 @@ export class GraphService {
         const client = this.getClient(accessToken);
         const response = await client.api(`/me/todo/lists/${listId}/tasks`).get();
         return response.value;
+    }
+    async scheduleHandoff(accessToken: string, bdoEmail: string, uwEmail: string, companyName: string): Promise<any> {
+        // 1. Find Times
+        const attendees = [bdoEmail, uwEmail];
+        const timeResult = await this.findMeetingTimes(accessToken, attendees);
+
+        let slot = timeResult.meetingTimeSuggestions?.[0]?.meetingTimeSlot;
+
+        // Fallback: If no common slot found, just pick a slot tomorrow at 10am (Brute force to ensure booking happens)
+        if (!slot) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(10, 0, 0, 0); // 10 AM
+            const end = new Date(tomorrow);
+            end.setMinutes(end.getMinutes() + 30); // 30 mins
+
+            slot = {
+                start: { dateTime: tomorrow.toISOString(), timeZone: "UTC" },
+                end: { dateTime: end.toISOString(), timeZone: "UTC" }
+            };
+        }
+
+        // 2. Create Event
+        const subject = `🤝 Handoff: ${companyName}`;
+        const body = `
+            <h3>Handoff Meeting: ${companyName}</h3>
+            <p><strong>BDO:</strong> ${bdoEmail} <br/> <strong>Underwriter:</strong> ${uwEmail}</p>
+            <p>Please review the <a href="https://ampacbrain.azurewebsites.net/?company=${encodeURIComponent(companyName)}">Lead File</a> in SharePoint before this call.</p>
+            <ul>
+                <li>Is the Application Complete?</li>
+                <li>Is the "Use of Proceeds" final?</li>
+                <li>Are there any "Hair on the deal" issues?</li>
+            </ul>
+        `;
+
+        return await this.createEvent(accessToken, subject, slot.start.dateTime, slot.end.dateTime, {
+            attendees: attendees,
+            body: body,
+            isOnlineMeeting: true
+        });
     }
 }
 

@@ -1,0 +1,111 @@
+name: Azure Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  # ============================================
+  # BUILD & DEPLOY CLIENT TO AZURE STATIC WEB APPS
+  # ============================================
+  deploy_client:
+    name: Deploy Client (Static Web Apps)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Shared Package
+        run: npm run build -w packages/shared
+
+      - name: Build Client
+        run: npm run build -w apps/client
+        env:
+          VITE_API_URL: https://leads-api-ampac-prod.azurewebsites.net
+          VITE_AZURE_CLIENT_ID: 695a1a76-a38e-4a7b-a88d-81ca61dc4c40
+          VITE_AZURE_TENANT_ID: common
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: '/apps/client/dist'
+          skip_app_build: true
+          skip_api_build: true
+
+  # ============================================
+  # BUILD & DEPLOY API TO AZURE APP SERVICE
+  # ============================================
+  deploy_api:
+    name: Deploy API (App Service)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Root Dependencies
+        run: npm ci
+
+      - name: Build Shared Package
+        run: |
+          cd packages/shared
+          npm run build
+          npm pack
+
+      - name: Setup API with Shared Package
+        working-directory: ./apps/api
+        run: |
+          # Copy the shared package tarball
+          cp ../../packages/shared/leads-shared-*.tgz ./leads-shared-0.0.1.tgz
+          # Update package.json to use local tarball instead of workspace
+          sed -i 's|"@leads/shared": "\*"|"@leads/shared": "file:./leads-shared-0.0.1.tgz"|' package.json
+          # Install production dependencies
+          npm install --omit=dev
+
+      - name: Build API
+        working-directory: ./apps/api
+        run: npm run build
+
+      - name: Create deployment package
+        working-directory: ./apps/api
+        run: |
+          mkdir -p deploy
+          # Copy compiled code
+          cp -r dist deploy/
+          # Copy shared package tarball
+          cp leads-shared-0.0.1.tgz deploy/
+          # Copy node_modules (built on Linux - correct paths)
+          cp -r node_modules deploy/
+          # Copy package.json (already has tarball reference)
+          cp package.json deploy/
+          # Copy web.config for IIS (Azure Windows)
+          cp web.config deploy/ 2>/dev/null || true
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: leads-api-ampac-prod
+          publish-profile: ${{ secrets.AZURE_API_PUBLISH_PROFILE }}
+          package: ./apps/api/deploy

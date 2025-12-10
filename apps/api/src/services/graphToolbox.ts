@@ -34,13 +34,17 @@ export class GraphToolbox {
             },
             {
                 name: "create_event",
-                description: "Create a calendar event.",
+                description: "Create a calendar event with optional Teams meeting link.",
                 parameters: {
                     type: "object",
                     properties: {
                         subject: { type: "string", description: "Event title" },
                         start: { type: "string", description: "Start time (ISO 8601)" },
-                        end: { type: "string", description: "End time (ISO 8601)" }
+                        end: { type: "string", description: "End time (ISO 8601)" },
+                        attendees: { type: "array", items: { type: "string" }, description: "List of attendee email addresses" },
+                        location: { type: "string", description: "Meeting location or room" },
+                        body: { type: "string", description: "Meeting description/agenda (HTML)" },
+                        isOnlineMeeting: { type: "boolean", description: "Create as Teams online meeting" }
                     },
                     required: ["subject", "start", "end"]
                 }
@@ -125,8 +129,13 @@ export class GraphToolbox {
             case "list_emails":
                 return await graphService.listEmails(accessToken, args.filter);
             case "create_event":
-                await graphService.createEvent(accessToken, args.subject, args.start, args.end);
-                return { success: true, message: "Event created" };
+                const eventResult = await graphService.createEvent(accessToken, args.subject, args.start, args.end, {
+                    attendees: args.attendees,
+                    location: args.location,
+                    body: args.body,
+                    isOnlineMeeting: args.isOnlineMeeting
+                });
+                return { success: true, message: "Event created", ...eventResult };
             case "find_meeting_times":
                 return await graphService.findMeetingTimes(accessToken, args.attendees, args.duration);
             case "upload_file":

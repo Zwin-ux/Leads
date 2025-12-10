@@ -9,6 +9,7 @@ export interface Task {
     completed: boolean;
     type: 'call' | 'email' | 'meeting' | 'todo';
     priority: 'high' | 'normal' | 'low';
+    assignedTo?: string;
 }
 
 export interface Activity {

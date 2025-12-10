@@ -797,10 +797,67 @@ textarea:focus {
   padding-bottom: 0.5rem;
 }
 
+/* ... existing code ... */
+
+/* Production Polish - Smooth Transitions */
+.pipeline-card {
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transform: translate3d(0, 0, 0);
+  will-change: transform, box-shadow;
+}
+
+.pipeline-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Skeleton Pulse Animation */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
 .result-card p {
   font-size: 0.85rem;
   margin-bottom: 0.5rem;
   color: var(--color-text);
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-4px);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.shake {
+  animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+  border-color: #ef4444 !important;
 }
 
 /* Notes Tab */

@@ -130,6 +130,78 @@ app.get('/api/search/firecrawl', async (req, res) => {
     }
 });
 
+// --- FILE UPLOAD (MULTER) ---
+import multer from 'multer';
+import { analyzeStream, analyzeDocument, detectDocumentType, type DocumentModelType } from './services/documentIntelligenceService';
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Legacy endpoint (backwards compatible)
+app.post('/api/documents/extract', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "No file uploaded" });
+        }
+
+        console.log(`Processing file: ${req.file.originalname} (${req.file.size} bytes)`);
+        const result = await analyzeStream(req.file.buffer);
+
+        if (!result) {
+            return res.status(422).json({ error: "Could not extract data from document" });
+        }
+
+        res.json({ success: true, data: result });
+
+    } catch (e: any) {
+        console.error("Doc Extraction Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// NEW: Enhanced document analysis endpoint with all models
+app.post('/api/documents/analyze', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "No file uploaded" });
+        }
+
+        const filename = req.file.originalname;
+        const requestedModel = req.body.model as DocumentModelType | undefined;
+
+        // Auto-detect or use requested model
+        const model = requestedModel || detectDocumentType(filename);
+
+        console.log(`Analyzing file: ${filename} (${req.file.size} bytes) with model: ${model}`);
+        const result = await analyzeDocument(req.file.buffer, model, filename);
+
+        res.json({
+            success: true,
+            detectedModel: model,
+            requestedModel: requestedModel || 'auto',
+            data: result
+        });
+
+    } catch (e: any) {
+        console.error("Enhanced Doc Analysis Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET available models
+app.get('/api/documents/models', (req, res) => {
+    res.json({
+        models: [
+            { id: 'prebuilt-tax.us.1040', name: 'Form 1040 (Personal Tax)', category: 'tax' },
+            { id: 'prebuilt-tax.us.1120', name: 'Form 1120 (Corporate Tax)', category: 'tax' },
+            { id: 'prebuilt-invoice', name: 'Invoice', category: 'financial' },
+            { id: 'prebuilt-receipt', name: 'Receipt', category: 'financial' },
+            { id: 'prebuilt-businessCard', name: 'Business Card', category: 'contact' },
+            { id: 'prebuilt-idDocument', name: 'ID Document', category: 'identity' },
+            { id: 'prebuilt-document', name: 'General Document (OCR)', category: 'general' }
+        ]
+    });
+});
+
 // 2. Leads CRUD
 app.get('/leads', async (req, res, next) => {
     try {
@@ -150,6 +222,8 @@ app.post('/leads', async (req, res, next) => {
             res.status(201).send("Bulk import successful");
         } else {
             const newLead = await leadRepository.create(body as Lead);
+            // Trigger "Jump Ball" notification
+            await teamsService.sendNewLeadNotification(newLead);
             res.status(201).json(newLead);
         }
     } catch (e) {
@@ -271,8 +345,65 @@ app.post('/processLead', async (req, res) => {
             result = { nextAction };
         } else if (action === "sendEmail") {
             if (!accessToken) return res.status(401).send("Missing access token");
-            const content = await brainService.generateEmail(lead, "intro");
-            result = { emailContent: content };
+
+            // 1. Fetch Context from Graph
+            let lastEmails: string[] = [];
+            let slots: string[] = [];
+
+            try {
+                if (lead.email) {
+                    lastEmails = await graphService.listEmailsFrom(accessToken, lead.email);
+                }
+                slots = await graphService.getAvailableSlots(accessToken);
+            } catch (err) {
+                console.warn("Graph Context Fetch Failed:", err);
+            }
+
+            // 2. Generate Smart Email
+            const emailType = (req.body.type as string) || "Intro";
+            const content = await brainService.generateSmartEmail(lead, emailType, {
+                lastEmails,
+                slots
+            });
+            result = { emailContent: content.body, subject: content.subject };
+
+
+
+        } else if (action === "analyzePhysics") {
+            const { dealPhysics } = await import('./services/dealPhysicsService');
+            const analysis = dealPhysics.analyze(lead);
+            result = { analysis };
+
+
+
+        } else if (action === "analyzeDocument") {
+            const { fileUrl } = req.body;
+            if (!fileUrl) throw new Error("fileUrl required");
+
+            const { docService } = await import('./services/docIntelligenceService');
+            const taxData = await docService.analyzeTaxReturn(fileUrl);
+            result = { taxData };
+
+
+
+        } else if (action === "spreadFinancials") {
+            const { taxData, proposedDebt } = req.body;
+            if (!taxData) throw new Error("taxData required");
+
+            const { spreadingService } = await import('./services/spreadingService');
+            const spread = spreadingService.spread(taxData, proposedDebt || 0);
+            result = { spread };
+
+
+
+        } else if (action === "conveneCouncil") {
+            const { lead, spread } = req.body;
+            if (!lead || !spread) throw new Error("lead and spread result required");
+
+            const { councilService } = await import('./services/councilService');
+            const councilReport = await councilService.conveneCouncil(lead, spread);
+            result = { councilReport };
+
         } else if (action === "analyzeDeal") {
             const analysis = await brainService.analyzeDeal(lead);
             result = { analysis };
@@ -304,18 +435,21 @@ app.post('/research', async (req, res) => {
 
         if (!query) return res.status(400).send("Missing query");
 
-        if (SERPAPI_KEY === "demo_key") {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+        if (SERPAPI_KEY === "demo_key" || !SERPAPI_KEY) {
+            // DEMO MODE: Provide consistent but labeled mock data due to missing API Key
+            console.log("Using Mock Research Data (Missing SERPAPI_KEY)");
+            await new Promise(resolve => setTimeout(resolve, 800)); // Simulate latency
+
             if (type === 'business') {
                 return res.json({
-                    summary: `(Mock) ${query} is a verified business in the local sector.`,
+                    summary: `[DEMO] ${query} is a verified business. (Add SERPAPI_KEY for real data)`,
                     headcount: "10-50 employees (est)",
                     flags: ["No recent bankruptcies", "Active entity"],
                     news: "Featured in local news for community service."
                 });
             } else {
                 return res.json({
-                    winRate: "High (est. 80%)",
+                    winRate: "High (est. 80%) [DEMO]",
                     speed: "Fast (avg 25 days)",
                     leverage: "Known for SBA 504 deals in this region."
                 });
@@ -358,6 +492,104 @@ app.post('/research', async (req, res) => {
     } catch (error: any) {
         console.error(`Error fetching research: ${error}`);
         res.status(500).send("Failed to fetch research data");
+    }
+});
+
+// --- TEAMS NOTIFICATION ---
+import { teamsService } from './services/teamsService';
+
+app.post('/api/notify/teams', async (req, res) => {
+    try {
+        const lead = req.body;
+        if (!lead || !lead.company) {
+            return res.status(400).send("Invalid lead data");
+        }
+        await teamsService.sendDealFundedNotification(lead);
+        res.json({ success: true, message: "Notification sent" });
+    } catch (error: any) {
+        console.error("Teams Notification Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/greenlight', async (req, res) => {
+    try {
+        const { leadId, companyName, accessToken } = req.body;
+        if (!accessToken) return res.status(401).json({ error: "Missing access token" });
+        if (!companyName) return res.status(400).json({ error: "Missing company name" });
+
+        console.log(`Greenlighting ${companyName}...`);
+        const result = await graphService.createLeadStructure(accessToken, companyName);
+
+        // Ideally update Lead with the Folder URL here
+        // await leadRepository.update({ id: leadId, folderUrl: result.webUrl });
+
+        res.json(result);
+    } catch (error: any) {
+        console.error("Greenlight Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/handoff', async (req, res) => {
+    try {
+        const { leadId, companyName, bdoEmail, uwEmail, accessToken } = req.body;
+
+        if (!accessToken) return res.status(401).json({ error: "Missing access token" });
+        if (!bdoEmail || !uwEmail) return res.status(400).json({ error: "Missing emails for attendees" });
+
+        console.log(`Scheduling Handoff for ${companyName}...`);
+        const result = await graphService.scheduleHandoff(accessToken, bdoEmail, uwEmail, companyName);
+
+        res.json({ success: true, event: result });
+    } catch (error: any) {
+        console.error("Handoff Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/scenario', async (req, res) => {
+    try {
+        const { industry, amount, collateral, story, bdo } = req.body;
+        console.log(`Processing Scenario from ${bdo}...`);
+
+        await teamsService.sendScenarioCard({ industry, amount, collateral, story, bdo });
+
+        res.json({ success: true, message: "Scenario sent to Underwriting Desk" });
+    } catch (error: any) {
+        console.error("Scenario Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- JOBS (Cron) ---
+app.post('/api/jobs/check-stalled', async (req, res) => {
+    try {
+        console.log("Running Stalled Deal Check...");
+        const leads = await leadRepository.getAll();
+        const STALL_THRESHOLD_DAYS = 10;
+        const now = new Date();
+
+        let notifiedCount = 0;
+
+        for (const lead of leads) {
+            if (lead.stage === 'In Process' && lead.loanAmount && lead.loanAmount > 500000) {
+                const lastContact = lead.lastContactDate ? new Date(lead.lastContactDate) : new Date(lead.createdAt || now);
+                const diffTime = Math.abs(now.getTime() - lastContact.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays > STALL_THRESHOLD_DAYS) {
+                    console.log(`Stalled Deal: ${lead.company} (${diffDays} days)`);
+                    await teamsService.sendStalledDealNotification(lead, diffDays);
+                    notifiedCount++;
+                }
+            }
+        }
+
+        res.json({ success: true, notified: notifiedCount });
+    } catch (error: any) {
+        console.error("Job Error:", error);
+        res.status(500).json({ error: error.message });
     }
 });
 

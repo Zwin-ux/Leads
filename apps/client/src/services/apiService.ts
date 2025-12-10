@@ -4,7 +4,13 @@ import { localStoreService } from "./localStoreService";
 import { authService } from "./authService";
 import { scoringService } from "./scoringService";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const getApiUrl = () => {
+    const envUrl = import.meta.env.VITE_API_URL;
+    if (!envUrl) return 'http://localhost:3001';
+    if (envUrl.startsWith('http')) return envUrl;
+    return `https://${envUrl}`;
+};
+const API_URL = getApiUrl();
 const IS_DEMO = import.meta.env.VITE_DEMO_MODE === "true";
 
 export class ApiService {
@@ -131,6 +137,119 @@ export class ApiService {
 
         if (!response.ok) throw new Error("Ad generation failed");
         return await response.json();
+    }
+
+    async triggerGreenlight(lead: Lead, accessToken: string): Promise<any> {
+        if (IS_DEMO) return { success: true, path: '/Demo/Path', webUrl: '#' };
+
+        const response = await fetch(`${API_URL}/api/greenlight`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                leadId: lead.id,
+                companyName: lead.company,
+                accessToken
+            })
+        });
+
+        if (!response.ok) throw new Error("Failed to greenlight");
+        return await response.json();
+    }
+
+    async scheduleHandoff(lead: Lead, accessToken: string, bdoEmail: string, uwEmail: string): Promise<any> {
+        if (IS_DEMO) return { success: true, event: { subject: 'Demo Meeting' } };
+
+        const response = await fetch(`${API_URL}/api/handoff`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                leadId: lead.id,
+                companyName: lead.company,
+                bdoEmail,
+                uwEmail,
+                accessToken
+            })
+        });
+
+        if (!response.ok) throw new Error("Failed to schedule handoff");
+        return await response.json();
+    }
+    async triggerScenario(data: any, accessToken: string): Promise<any> {
+        if (IS_DEMO) return { success: true };
+        const response = await fetch(`${API_URL}/api/scenario`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, accessToken })
+        });
+        if (!response.ok) throw new Error("Scenario failed");
+        return await response.json();
+    }
+
+    async generateSmartEmail(lead: Lead, accessToken: string, type: string): Promise<{ subject: string, body: string }> {
+        if (IS_DEMO) return { subject: "Demo Subject", body: "Demo Body" };
+
+        const response = await fetch(`${API_URL}/processLead`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'sendEmail',
+                lead,
+                type,
+                accessToken
+            })
+        });
+
+        if (!response.ok) throw new Error("Generation failed");
+        const data = await response.json();
+        return { subject: data.subject || "Draft", body: data.emailContent };
+    }
+
+    async updateStipulations(_leadId: string, _stips: any[], _accessToken: string): Promise<any> {
+        // In a real app, PATCH /leads/:id
+        // For now, we simulate success
+        if (IS_DEMO) return { success: true };
+
+        // If we had a real endpoint:
+        /*
+        await fetch(`${API_URL}/leads/${leadId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ stipulations: stips })
+        });
+        */
+        return { success: true };
+    }
+
+    async analyzeLeadPhysics(lead: Lead, accessToken: string): Promise<any> {
+        if (IS_DEMO) {
+            // Mock Physics for Demo
+            const loan = lead.loanAmount || 0;
+            const rev = lead.annualRevenue || 0;
+            const noi = rev * 0.15; // Assume 15% margin
+            const debt = loan * 0.08; // Rough debt service
+            const dscr = debt > 0 ? (noi / debt) : 0;
+
+            return {
+                dscr: Number(dscr.toFixed(2)),
+                ltv: 0.85,
+                status: dscr < 1.15 ? 'Caution' : 'Healthy',
+                flags: dscr < 1.15 ? ['DSCR Low'] : [],
+                suggestions: dscr < 1.15 ? ['Increase Down Payment'] : []
+            };
+        }
+
+        const response = await fetch(`${API_URL}/processLead`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'analyzePhysics',
+                lead,
+                accessToken
+            })
+        });
+
+        if (!response.ok) throw new Error("Analysis failed");
+        const data = await response.json();
+        return data.analysis;
     }
 }
 

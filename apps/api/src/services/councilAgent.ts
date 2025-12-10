@@ -26,10 +26,24 @@ export class CouncilAgent {
     private openai: OpenAI;
 
     constructor() {
-        // Fallback or use env
-        const apiKey = process.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "missing_key";
-        if (apiKey === "missing_key") console.warn("WARNING: OPENAI_API_KEY missing. CouncilAgent will fail on use.");
-        this.openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: false });
+        const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+        const azureKey = process.env.AZURE_OPENAI_API_KEY;
+        const deployment = process.env.AZURE_OPENAI_DEPLOYMENT;
+
+        if (azureEndpoint && azureKey) {
+            this.openai = new OpenAI({
+                baseURL: azureEndpoint,
+                apiKey: azureKey,
+                defaultHeaders: { "api-key": azureKey },
+                dangerouslyAllowBrowser: false
+            });
+            console.log(`CouncilAgent configured with Azure OpenAI (Deployment: ${deployment})`);
+        } else {
+            console.warn("WARNING: Azure OpenAI Credentials missing. CouncilAgent will fail.");
+            // Fallback for local dev without Azure keys if needed, or just stay broken until config
+            const apiKey = process.env.OPENAI_API_KEY || "missing_key";
+            this.openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: false });
+        }
     }
 
     async conveneCouncil(context: FinancialContext): Promise<CouncilResult> {

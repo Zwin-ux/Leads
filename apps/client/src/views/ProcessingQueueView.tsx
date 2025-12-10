@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { apiService } from "../services/apiService";
 import { authService } from "../services/authService";
 import type { Lead } from "@leads/shared";
+import { DocumentChecklist } from "../components/DocumentChecklist";
+import { ClosingChecklist } from "../components/ClosingChecklist";
 
 export const ProcessingQueueView: React.FC = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -33,6 +35,30 @@ export const ProcessingQueueView: React.FC = () => {
         const updated = { ...lead, dealStage: newStage };
         await apiService.updateLead(updated);
         loadLeads(); // Refresh
+    };
+
+    const [checklistLead, setChecklistLead] = useState<Lead | null>(null);
+
+    const handleUpdateLeadDocs = async (docId: string, updates: any) => {
+        if (!checklistLead) return;
+
+        // Find doc index or add new
+        const docs = checklistLead.documents || [];
+        const docIndex = docs.findIndex(d => d.id === docId);
+
+        let newDocs = [...docs];
+        if (docIndex >= 0) {
+            newDocs[docIndex] = { ...newDocs[docIndex], ...updates };
+        } else {
+            // New doc (shouldn't happen with current Checklist implementation but safety first)
+        }
+
+        const updatedLead = { ...checklistLead, documents: newDocs };
+        setChecklistLead(updatedLead); // Optimistic
+        await apiService.updateLead(updatedLead);
+
+        // Update main list too
+        setLeads(leads.map(l => l.id === updatedLead.id ? updatedLead : l));
     };
 
     if (loading) return <div className="p-8 text-white">Loading Queue...</div>;
@@ -100,7 +126,10 @@ export const ProcessingQueueView: React.FC = () => {
                                                     Move to {col.id === "Underwriting" ? "Processing" : col.id === "Processing" ? "Closing" : "Funded"} &rarr;
                                                 </button>
                                             )}
-                                            <button className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs text-gray-300">
+                                            <button
+                                                onClick={() => setChecklistLead(lead)}
+                                                className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs text-gray-300"
+                                            >
                                                 Checklist
                                             </button>
                                         </div>
@@ -110,6 +139,50 @@ export const ProcessingQueueView: React.FC = () => {
                     </div>
                 ))}
             </div>
+
+            {/* Checklist Modal */}
+            {checklistLead && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setChecklistLead(null)}>
+                    <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">{checklistLead.company} Checklist</h3>
+                                <p className="text-sm text-gray-500">{checklistLead.loanProgram} Loan</p>
+                            </div>
+                            <button onClick={() => setChecklistLead(null)} className="text-gray-400 hover:text-gray-600">×</button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 bg-white">
+                            {checklistLead.dealStage === 'Closing' ? (
+                                <ClosingChecklist
+                                    lead={checklistLead}
+                                    onUpdateLead={async (updates) => {
+                                        const updated = { ...checklistLead, ...updates };
+                                        setChecklistLead(updated);
+                                        await apiService.updateLead(updated);
+                                    }}
+                                    onUpdateClosingItem={async (itemId, updates) => {
+                                        const items = checklistLead.closingItems || [];
+                                        const idx = items.findIndex(i => i.id === itemId);
+                                        let newItems = [...items];
+                                        if (idx >= 0) newItems[idx] = { ...newItems[idx], ...updates };
+                                        else newItems.push({ id: itemId, category: 'closing_day', label: 'New Item', status: 'pending', ...updates });
+
+                                        const updated = { ...checklistLead, closingItems: newItems };
+                                        setChecklistLead(updated);
+                                        await apiService.updateLead(updated);
+                                    }}
+                                />
+                            ) : (
+                                <DocumentChecklist
+                                    lead={checklistLead}
+                                    onUpdateDocument={handleUpdateLeadDocs}
+                                    onRequestDocs={() => { }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

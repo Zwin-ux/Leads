@@ -1,22 +1,26 @@
+
 import type { UserRole } from '@leads/shared';
+import { PublicClientApplication, type AccountInfo } from '@azure/msal-browser';
+import { msalConfig, loginRequest } from '../authConfig';
 
 export interface User {
     name: string;
     email: string;
     title: string;
     role: UserRole;
-    isCommitteeMember?: boolean;  // Credit Committee Member - can approve deals
-    isCommitteeParticipant?: boolean;  // Attends committee meetings
-    division?: 'SBA' | 'CL' | 'Both';  // SBA 504, Commercial Lending, or Both
+    isCommitteeMember?: boolean;
+    isCommitteeParticipant?: boolean;
+    division?: 'SBA' | 'CL' | 'Both';
+    // Entra ID specific
+    entraId?: string; // Object ID from Azure AD
 }
 
-// Committee structure is defined via isCommitteeMember and isCommitteeParticipant flags below
-
+// Existing team members for role resolution
 export const TEAM_MEMBERS: User[] = [
     // Leadership & Management
     { name: "Hilda Kennedy", email: "HKennedy@ampac.com", title: "Founder/President", role: "admin", isCommitteeMember: true },
     { name: "Julie Silvio", email: "JSilvio@ampac.com", title: "EVP, Chief Credit Officer", role: "underwriter", isCommitteeMember: true },
-    { name: "Edmund Ryan", email: "Eryan@ampac.com", title: "EVP, Director of 504 Sales", role: "manager" }, // Known as Ed Ryan
+    { name: "Edmund Ryan", email: "Eryan@ampac.com", title: "EVP, Director of 504 Sales", role: "manager" },
     { name: "Janine Warren", email: "JWarren@ampac.com", title: "EVP, Director of Loan Integration", role: "manager" },
     { name: "Jeff Sceranka", email: "JSceranka@ampac.com", title: "EVP, New Markets and Business Development", role: "bdo" },
     { name: "Nicole J. Jones", email: "NJones@ampac.com", title: "EVP, Chief Development & Innovation Director", role: "manager" },
@@ -25,10 +29,10 @@ export const TEAM_MEMBERS: User[] = [
     { name: "Myron Perryman", email: "MPerryman@ampac.com", title: "SVP, Commercial Lending", role: "manager", isCommitteeMember: true, division: "CL" },
     { name: "Ahmed Zwin", email: "AZwin@ampac.com", title: "EVP, Director of Government Guaranteed Loan Programs", role: "manager", isCommitteeMember: true, division: "Both" },
 
-    // Committee Participants (Voting/Non-Voting context preserved where known)
+    // Committee Participants
     { name: "Jennifer Pramana", email: "JPramana@ampac.com", title: "VP, Loan Processing Manager", role: "processor", isCommitteeParticipant: true },
     { name: "Erik Iwashika", email: "EIwashika@ampac.com", title: "VP, SBA 504 Specialist", role: "loan_officer", isCommitteeParticipant: true },
-    { name: "Ronald Sylvia", email: "RSylvia@ampac.com", title: "VP, SBA 504 Specialist", role: "loan_officer", isCommitteeParticipant: true }, // Note: Not in Entra list provided, preserving if still active, otherwise might be stale. Keeping for safety.
+    { name: "Ronald Sylvia", email: "RSylvia@ampac.com", title: "VP, SBA 504 Specialist", role: "loan_officer", isCommitteeParticipant: true },
     { name: "Javier Jimenez", email: "JJimenez@ampac.com", title: "AVP, SBA 504 Specialist", role: "loan_officer", isCommitteeParticipant: true },
     { name: "Brianne Sceranka", email: "BSceranka@ampac.com", title: "VP, Business Development", role: "bdo", isCommitteeParticipant: true },
     { name: "Ian Aguilar", email: "Iaguilar@ampac.com", title: "Business Development Associate", role: "bdo", isCommitteeParticipant: true },
@@ -68,7 +72,6 @@ export const TEAM_MEMBERS: User[] = [
     { name: "Eric Ebel", email: "eebel@ampac.com", title: "Operations", role: "processor" },
     { name: "Evelyn Kennedy", email: "EPKennedy@ampac.com", title: "Operations", role: "processor" },
     { name: "Janette St. Jean", email: "jstjean@ampac.com", title: "Operations", role: "processor" },
-
     { name: "Lakisha Gant", email: "Lgant@ampac.com", title: "Operations", role: "processor" },
     { name: "Lelia Kennedy", email: "LKennedy@ampac.com", title: "Operations", role: "processor" },
 
@@ -76,27 +79,110 @@ export const TEAM_MEMBERS: User[] = [
     { name: "Mazen Zwin", email: "MZwin@ampac.com", title: "Developer", role: "admin" }
 ];
 
-const SHARED_PASSWORD = "AmPac@504";
+// MSAL Instance
+const msalInstance = new PublicClientApplication(msalConfig);
 
 export class AuthService {
-    login(email: string, password: string): User | null {
-        if (password !== SHARED_PASSWORD) return null;
+    private initialized = false;
 
-        const user = TEAM_MEMBERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-        return user || null;
+    async initialize(): Promise<void> {
+        if (this.initialized) return;
+        await msalInstance.initialize();
+        // Handle redirect promise (for redirect flow)
+        await msalInstance.handleRedirectPromise();
+        this.initialized = true;
     }
 
+    // SSO Login via Microsoft
+    async login(): Promise<User | null> {
+        await this.initialize();
+        try {
+            const response = await msalInstance.loginPopup(loginRequest);
+            if (response.account) {
+                return this.resolveUser(response.account);
+            }
+            return null;
+        } catch (error) {
+            console.error("Login failed:", error);
+            return null;
+        }
+    }
+
+    // Get current logged-in user
     getCurrentUser(): User | null {
-        const stored = localStorage.getItem("leads_current_user");
-        return stored ? JSON.parse(stored) : null;
+        // 1. Check Dev Override first
+        const devOverride = localStorage.getItem("leads_dev_user_override");
+        if (devOverride) {
+            try {
+                return JSON.parse(devOverride);
+            } catch (e) {
+                console.error("Failed to parse dev user override", e);
+                localStorage.removeItem("leads_dev_user_override");
+            }
+        }
+
+        // 2. Check MSAL
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+            return this.resolveUser(accounts[0]);
+        }
+        return null;
     }
 
-    setCurrentUser(user: User) {
-        localStorage.setItem("leads_current_user", JSON.stringify(user));
+    // Resolve Entra ID account to internal User
+    private resolveUser(account: AccountInfo): User {
+        const email = account.username; // Usually the email
+        const teamMember = TEAM_MEMBERS.find(
+            u => u.email.toLowerCase() === email.toLowerCase()
+        );
+
+        if (teamMember) {
+            return {
+                ...teamMember,
+                entraId: account.localAccountId,
+                name: account.name || teamMember.name, // Prefer AD name
+            };
+        }
+
+        // Unknown user - default to read-only BDO
+        return {
+            name: account.name || email,
+            email: email,
+            title: "External User",
+            role: "bdo",
+            entraId: account.localAccountId,
+        };
     }
 
-    logout() {
-        localStorage.removeItem("leads_current_user");
+    // Logout
+    async logout(): Promise<void> {
+        await this.initialize();
+        await msalInstance.logoutPopup();
+    }
+
+    // Get access token for API calls
+    async getAccessToken(scopes: string[] = ["User.Read"]): Promise<string | null> {
+        await this.initialize();
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length === 0) return null;
+
+        try {
+            const response = await msalInstance.acquireTokenSilent({
+                scopes,
+                account: accounts[0],
+            });
+            return response.accessToken;
+        } catch (error) {
+            console.error("Token acquisition failed:", error);
+            // Try interactive if silent fails
+            try {
+                const response = await msalInstance.acquireTokenPopup({ scopes });
+                return response.accessToken;
+            } catch (popupError) {
+                console.error("Interactive token acquisition failed:", popupError);
+                return null;
+            }
+        }
     }
 
     // Check if user can approve deals in committee
@@ -117,6 +203,16 @@ export class AuthService {
     // Get committee participants
     getCommitteeParticipants(): User[] {
         return TEAM_MEMBERS.filter(u => u.isCommitteeParticipant);
+    }
+
+    // Legacy compatibility - set user manually (for dev mode bypass)
+    setCurrentUser(user: User): void {
+        localStorage.setItem("leads_dev_user_override", JSON.stringify(user));
+    }
+
+    // Get MSAL instance for advanced usage
+    getMsalInstance(): PublicClientApplication {
+        return msalInstance;
     }
 }
 

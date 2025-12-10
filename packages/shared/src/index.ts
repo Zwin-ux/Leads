@@ -103,14 +103,24 @@ export interface Lead {
     stage: 'New' | 'Contacted' | 'Warm' | 'Qualified' | 'Proposal' | 'Negotiation' | 'In Process' | 'Not a Fit';
 
     // Business Details
+    title?: string; // Job Title
+    linkedinProfile?: string;
+    website?: string;
+    secondaryEmail?: string;
+
     stateOfInc?: string;
-    city?: string;
+    city?: string; // Business City
+    state?: string; // Business State
+    address?: string; // Business Address
+    zip?: string; // Business Zip
+
     owner?: string; // BDO Owner
     industry?: string;
     naicsCode?: string;
     yearsInBusiness?: number;
     annualRevenue?: number;
     netIncome?: number;
+    numberEmployees?: number;
 
     // Deal Context
     loanProgram?: '504' | '7a' | 'Micro' | 'Unknown';
@@ -140,6 +150,17 @@ export interface Lead {
     occupancyStatus?: string;
     collateral?: string;
 
+    // Deal Physics (The Deal Desk)
+    financials?: {
+        noi?: number; // Net Operating Income
+        existingDebtService?: number; // Annual
+        proposedDebtService?: number; // Annual (Calculated)
+        totalProjectCost?: number; // Total Project
+        loanAmountInfo?: number; // Request
+        downPayment?: number;
+        appraisedValue?: number; // For LTV
+    };
+
     // Activity & Tasks
     lastContactDate?: string;
     nextAction?: string;
@@ -166,6 +187,7 @@ export interface Lead {
 
     // Documents (LO Feature)
     documents?: Document[];
+    stipulations?: Stipulation[];
 
     // Bank Partners on this deal (LO Feature)
     bankPartners?: BankPartnerDeal[];
@@ -175,6 +197,20 @@ export interface Lead {
     postCloseItems?: PostCloseItem[];
     closingDate?: string;
     fundingDate?: string;
+
+    // Processing Workflow
+    processorId?: string;
+    processingPriority?: string;
+    targetClosingDate?: string;
+
+    // BDO / Qualification
+    sbaFit?: string;
+    leadScore?: number;
+    // dealStage?: string; // Duplicate (uses DealStage type)
+    dealStructure?: any; // Sources & Uses JSON
+    qualificationData?: any; // BDO Checklist State
+    estimatedRevenue?: string;
+    estimatedEmployees?: string;
 
     // E-Tran Integration
     etranAppId?: string;
@@ -187,20 +223,16 @@ export interface Lead {
     updatedAt?: string;
 
     // Legacy / Repository Fields (Ported from Azure Functions/Prisma)
-    address?: string; // Business Address
-    state?: string;
-    zip?: string;
-    source?: string;
-    status?: string | 'new';
-    financials?: any;
-    aiAnalysis?: any;
-    stips?: any;
-
-    // Processing Workflow
-    processorId?: string;
-    processingPriority?: 'High' | 'Normal' | 'Low';
-    targetClosingDate?: string;
+    // address?: string; // Use propertyAddress or granular fields
+    // state?: string;
+    // zip?: string;
+    completedDate?: string;
+    // assignedTo?: string; // Duplicate
+    thirdParty?: string; // Title company, escrow, etc.
+    thirdPartyContact?: string;
+    // notes?: string; // Duplicate (uses Note[])
 }
+
 
 // Closing checklist item (Processor workflow)
 export interface ClosingItem {
@@ -242,6 +274,24 @@ export interface Note {
     author: string;
     type: 'UserNote' | 'SystemEvent';
     context?: 'Call' | 'Email' | 'Meeting' | 'System' | 'Manual';
+}
+
+export interface Stipulation {
+    id: string;
+    title: string;
+    description: string;
+    status: 'Pending' | 'In Review' | 'Cleared' | 'Waived';
+    assignedTo: 'BDO' | 'Processor' | 'Client';
+    dueDate?: string;
+    comments: StipComment[];
+    createdAt: string;
+}
+
+export interface StipComment {
+    id: string;
+    author: string;
+    text: string;
+    date: string;
 }
 
 // Document checklist templates by program

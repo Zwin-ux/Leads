@@ -1,93 +1,102 @@
-import axios from 'axios';
+import OpenAI from 'openai';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const BRAIN_SERVICE_URL = process.env.BRAIN_SERVICE_URL || "https://brain-service-952649324958.us-central1.run.app";
+// Azure Config
+const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+const azureKey = process.env.AZURE_OPENAI_API_KEY;
+const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || "Kimi-K2-Thinking";
+
+const client = (azureEndpoint && azureKey)
+    ? new OpenAI({
+        baseURL: azureEndpoint,
+        apiKey: azureKey,
+        defaultHeaders: { "api-key": azureKey } // Often required for Azure direct usage if SDK doesn't auth automatically
+    })
+    : null;
 
 export class BrainService {
-    async getNextAction(lead: any): Promise<string> {
+
+    // Core Agent Runner
+    public async triggerAgent(systemPrompt: string, userContent: string, jsonMode = false): Promise<string> {
+        if (!client) {
+            console.warn("BrainService: Azure OpenAI not configured. Using fallback.");
+            // Return JSON-like string if jsonMode is requested to prevent JSON.parse crashes
+            if (jsonMode) return JSON.stringify({ hooks: [], beats: [], caption: "AI Service Unavailable (Missing Key)" });
+            return "AI Service Unavailable. Please configure Azure OpenAI keys.";
+        }
+
         try {
-            const response = await axios.post(`${BRAIN_SERVICE_URL}/v1/agents/trigger`, {
-                agent: "sales_coach",
-                input: { lead }
+            console.log(`🧠 Brain Thinking... (Model: ${deployment})`);
+            const completion = await client.chat.completions.create({
+                model: deployment,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userContent }
+                ],
+                response_format: jsonMode ? { type: "json_object" } : undefined,
+                temperature: 0.7,
             });
-            return response.data.action || "Check in";
-        } catch (error) {
-            console.error("Error calling Brain Service:", error);
-            return "Review manually";
+
+            return completion.choices[0].message.content || "";
+        } catch (error: any) {
+            console.error("BrainService Error:", error.message);
+            throw error;
         }
     }
 
-    async generateEmail(lead: any, type: string): Promise<string> {
+    async getNextAction(lead: any): Promise<string> {
+        const prompt = `You are a sales coach. Analyze this lead and suggest the SINGLE most important next action (max 5 words).`;
+        const content = `Lead: ${lead.firstName} ${lead.lastName}, Company: ${lead.company}. Notes: ${JSON.stringify(lead.notes)}`;
+        const result = await this.triggerAgent(prompt, content);
+        return result.replace(/['"]/g, '').trim() || "Check in";
+    }
+
+    async generateSmartEmail(lead: any, type: string, context: { lastEmails?: string[], slots?: string[], senderName?: string }): Promise<{ subject: string, body: string }> {
+        const prompt = `
+        You are a top-tier BDO (Business Development Officer) for AmPac Business Capital (SBA 504 Loans).
+        Write a short, professional email.
+        
+        Mode: ${type}
+        Sender: ${context.senderName || "AmPac BDO"}
+        
+        Context:
+        - Lead: ${lead.company} (${lead.firstName} ${lead.lastName})
+        - Industry: ${lead.industry || 'Unknown'}
+        - Need: ${lead.useOfFunds?.join(', ') || 'Capital'}
+        - Recent Communication: ${context.lastEmails?.join('\n') || "None"}
+        - Available Slots: ${context.slots?.join(', ') || "Flexible"}
+
+        Goal:
+        - If 'Intro': highlight SBA 504 benefits (low down payment).
+        - If 'FollowUp': Reference recent communication if any.
+        - If 'Revival': Short check-in.
+        - ALWAYS offer the specific slots if provided.
+        
+        Output JSON: { "subject": "...", "body": "HTML string..." }
+        `;
+
+        const result = await this.triggerAgent(prompt, "Generate email.", true);
         try {
-            const context = {
-                program: lead.loanProgram || 'General',
-                stage: lead.dealStage || 'Prospecting',
-                topic: type,
-                financials: {
-                    revenue: lead.annualRevenue,
-                    netIncome: lead.netIncome
-                },
-                deal: {
-                    projectCost: lead.projectCost,
-                    useOfFunds: lead.useOfFunds,
-                    propertyType: lead.propertyType
-                },
-                recentNotes: lead.notes?.slice(0, 3).map((n: any) => n.content).join('; ')
-            };
-
-            const prompt = `
-                Write a ${context.program} SBA email for a lead in ${context.stage} stage. 
-                Topic: ${context.topic}.
-                Context:
-                - Financials: Rev $${context.financials.revenue || '?'}, NI $${context.financials.netIncome || '?'}
-                - Deal: ${context.program === '504' ? `Cost $${context.deal.projectCost}, Type ${context.deal.propertyType}` : `Use: ${context.deal.useOfFunds}`}
-                - Recent Notes: ${context.recentNotes || 'None'}
-            `;
-
-            const response = await axios.post(`${BRAIN_SERVICE_URL}/v1/agents/trigger`, {
-                agent: "copywriter",
-                input: {
-                    lead,
-                    type,
-                    context: prompt
-                }
-            });
-            return response.data.content || "Draft email...";
-        } catch (error) {
-            console.error("Error calling Brain Service:", error);
-            return "Error generating email.";
+            return JSON.parse(result);
+        } catch {
+            return { subject: "Error Generating", body: "Could not generate email." };
         }
     }
 
     async analyzeDeal(lead: any): Promise<string> {
-        try {
-            const response = await axios.post(`${BRAIN_SERVICE_URL}/v1/agents/trigger`, {
-                agent: "underwriter",
-                input: {
-                    lead,
-                    task: "analyze_eligibility"
-                }
-            });
-            return response.data.content || "Analysis pending...";
-        } catch (error) {
-            console.error("Error analyzing deal:", error);
-            return "Could not analyze deal.";
-        }
+        const prompt = `You are a credit underwriter. Analyze the eligibility of this deal for SBA 504 or 7a financing. Output markdown.`;
+        const content = JSON.stringify(lead);
+        return await this.triggerAgent(prompt, content);
     }
 
     async generateAdScript(context: any): Promise<any> {
+        const prompt = `You are a scriptwriter. Create a 30s ad script. Return JSON format: { "hooks": [], "beats": [], "caption": "" }`;
+        const result = await this.triggerAgent(prompt, JSON.stringify(context), true);
         try {
-            const response = await axios.post(`${BRAIN_SERVICE_URL}/v1/agents/trigger`, {
-                agent: "copywriter",
-                input: {
-                    task: "generate_ad_script",
-                    ...context
-                }
-            });
-            // Expecting JSON shape: { hooks: string[], beats: string[], caption: string }
-            return response.data;
-        } catch (error) {
-            console.error("Error generating ad script:", error);
-            throw new Error("Failed to generate ad script.");
+            return JSON.parse(result);
+        } catch {
+            return { hooks: [], beats: [], caption: "Error parsing script" };
         }
     }
 }

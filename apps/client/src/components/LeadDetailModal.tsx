@@ -7,6 +7,8 @@ import { BankPartnerPanel } from './BankPartnerPanel';
 import { ClosingChecklist } from './ClosingChecklist';
 import { SBAEligibilityScanner } from './SBAEligibilityScanner';
 import { EmailAction } from './EmailAction';
+import { BDOQualificationChecklist } from './BDOQualificationChecklist';
+import { DealStructureCalculator } from './DealStructureCalculator';
 import { graphService, type EmailThread } from '../services/graphService';
 
 interface LeadDetailModalProps {
@@ -591,6 +593,18 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
 
                     {activeTab === 'qualification' && (
                         <div className="qualification-view">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                                <BDOQualificationChecklist
+                                    lead={lead}
+                                    onUpdate={async (updates) => onUpdate({ ...lead, ...updates })}
+                                />
+                                {/* Placeholder for Future Deal Structurer */}
+                                <DealStructureCalculator
+                                    lead={lead}
+                                    onUpdate={async (updates) => onUpdate({ ...lead, ...updates })}
+                                />
+                            </div>
+
                             <SBAEligibilityScanner
                                 lead={lead}
                                 onUpdateNote={(note) => {
