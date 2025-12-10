@@ -90,6 +90,246 @@ export type DealStage =
 // User roles for permission control
 export type UserRole = 'bdo' | 'loan_officer' | 'processor' | 'underwriter' | 'manager' | 'admin';
 
+// ============================================
+// SBA 504 LOAN MANAGEMENT TYPES
+// ============================================
+
+// Loan Risk Assessment Levels
+export type LoanRiskLevel = 'low' | 'medium' | 'high' | 'very_high';
+
+// Loan Status for full lifecycle
+export type LoanStatus =
+    | 'prospect'
+    | 'application'
+    | 'processing'
+    | 'committee_review'
+    | 'president_approval'
+    | 'board_ratify'
+    | 'sba_submitted'
+    | 'sba_authorized'
+    | 'closing'
+    | 'funded'
+    | 'servicing'
+    | 'paid_off'
+    | 'cancelled'
+    | 'charged_off'
+    | 'liquidated';
+
+// Loan Characteristics (Boolean flags)
+export interface LoanCharacteristics {
+    isPurchase?: boolean;
+    isConstruction?: boolean;
+    isEquipment?: boolean;
+    hasLifeInsurance?: boolean;
+    isGroundLeased?: boolean;
+    isFloodZone?: boolean;
+    isStartup?: boolean;
+    isRefinance50?: boolean;
+    isRefinance?: boolean;
+    isFranchise?: boolean;
+    franchiseName?: string;
+}
+
+// Property/Project Details
+export interface ProjectProperty {
+    apn?: string; // Assessor's Parcel Number
+    streetNumber?: string;
+    streetName?: string;
+    suiteNumber?: string;
+    city?: string;
+    state?: string;
+    county?: string;
+    zipCode?: string;
+    webPage?: string;
+    congressionalDistrict?: string;
+}
+
+// Financial Structure of the Loan
+export interface LoanFinancialStructure {
+    totalProject?: number;
+    thirdParty1st?: number; // First lien amount
+    netDebenture?: number; // SBA debenture (net)
+    interim?: number; // Interim loan amount
+    borrowerDown?: number; // Borrower equity
+    grossDebenture?: number; // Gross debenture
+    originationFee?: number;
+    servicingFee?: number;
+    closingFee?: number;
+    sbaHalfPoint?: number;
+    halfPointDateReceived?: string;
+}
+
+// Interest Rates
+export interface LoanRates {
+    debentureRate?: number;
+    cdcNoteRate?: number;
+    firstNoteRate?: number;
+    firstLoanIndex?: string; // e.g., "Prime", "SOFR"
+    interimLoanRate?: number;
+    interimLoanIndex?: string;
+}
+
+// Lender Information
+export interface LoanLenders {
+    firstLender?: string;
+    firstLenderContact?: string;
+    interimLender?: string;
+    interimLenderContact?: string;
+}
+
+// Approval Workflow Dates
+export interface LoanApprovals {
+    loanCommitteeApproval?: string;
+    presidentApproval?: string;
+    boardRatify?: string;
+    boardApproval?: string;
+    dateToSba?: string;
+    authDate?: string;
+    authNumber?: string;
+}
+
+// SBA 327 Closing Documents
+export interface Sba327Forms {
+    sba327_1?: string;
+    sba327_2?: string;
+    sba327_3?: string;
+    sba327_4?: string;
+}
+
+// Environmental & Appraisal Compliance
+export interface LoanCompliance {
+    envDateApproved?: string;
+    envDateOfReport?: string;
+    appDateApproved?: string;
+    appDate?: string;
+}
+
+// Funding Milestones
+export interface FundingMilestones {
+    bankRecordDate?: string;
+    bankFundDate?: string;
+    escrowCloseDate?: string;
+    cdcSigningDate?: string;
+    cdcFundDate?: string;
+    noticeOfCompletion?: string;
+    reconveyanceRecvdDate?: string;
+}
+
+// UCC Filing Information
+export interface UccFiling {
+    uccFilingDate?: string;
+    uccContinuationFilingDate?: string;
+    uccFilingNo?: string;
+}
+
+// Risk Assessment
+export interface LoanRiskAssessment {
+    loanRisk?: LoanRiskLevel;
+    applicationLoanRating?: number; // 1-5
+    servicingLoanRating?: number; // 1-5
+    riskNotes?: string;
+}
+
+// Jobs Impact (SBA Requirement)
+export interface JobsImpact {
+    jobsBeforeProject?: number;
+    jobsCreated?: number;
+    jobsRetained?: number;
+    jobs2YrsProjected?: number;
+    jobs2YrsActual?: number;
+}
+
+// Insurance Information
+export interface LoanInsurance {
+    insCoPolicyNo?: string;
+    insExpDate?: string;
+    insCoName?: string;
+    insCoAgentName?: string;
+    insPhone?: string;
+    insFax?: string;
+    insEmail?: string;
+}
+
+// Servicing & Disposition
+export interface LoanServicing {
+    principleBalance?: number;
+    lastDatePaid?: string;
+    cancelledDate?: string;
+    liquidationDate?: string;
+    liquidationBalance?: number;
+    paidDate?: string;
+    chargeOffDate?: string;
+    chargeOffBalance?: number;
+    shortSaleBalance?: number;
+    lastSiteVisit?: string;
+}
+
+// Borrower/Operating Company Details
+export interface BorrowerDetails {
+    borrowerName?: string;
+    dba?: string;
+    operatingCompany?: string;
+    epc?: string; // Eligible Passive Company
+}
+
+// Complete SBA 504 Loan Data Structure
+export interface Sba504LoanData {
+    // Core Identifiers
+    projectId?: string;
+    loanStatus?: LoanStatus;
+
+    // Assignment
+    bdo?: string;
+    loanProcessor?: string;
+    lpAssignedDate?: string;
+    dateReceived?: string;
+
+    // Borrower
+    borrower?: BorrowerDetails;
+
+    // Project/Property
+    project?: ProjectProperty;
+
+    // Loan Characteristics
+    characteristics?: LoanCharacteristics;
+
+    // Financial Structure
+    financial?: LoanFinancialStructure;
+
+    // Rates
+    rates?: LoanRates;
+
+    // Lenders
+    lenders?: LoanLenders;
+
+    // Approvals
+    approvals?: LoanApprovals;
+
+    // SBA 327 Forms
+    sba327?: Sba327Forms;
+
+    // Compliance
+    compliance?: LoanCompliance;
+
+    // Funding
+    funding?: FundingMilestones;
+
+    // UCC
+    ucc?: UccFiling;
+
+    // Risk
+    risk?: LoanRiskAssessment;
+
+    // Jobs
+    jobs?: JobsImpact;
+
+    // Insurance
+    insurance?: LoanInsurance;
+
+    // Servicing
+    servicing?: LoanServicing;
+}
+
 export interface Lead {
     id: string;
     firstName: string;
@@ -231,6 +471,11 @@ export interface Lead {
     thirdParty?: string; // Title company, escrow, etc.
     thirdPartyContact?: string;
     // notes?: string; // Duplicate (uses Note[])
+
+    // ============================================
+    // SBA 504 LOAN DATA (Full Lifecycle)
+    // ============================================
+    sba504?: Sba504LoanData;
 }
 
 
@@ -384,4 +629,154 @@ export interface AdRequest {
         city?: string;
         state?: string;
     };
+}
+
+// ============================================
+// SBA 504 LOAN CONSTANTS & HELPERS
+// ============================================
+
+// Loan Status Display Labels
+export const LOAN_STATUS_LABELS: Record<LoanStatus, string> = {
+    'prospect': 'Prospect',
+    'application': 'Application',
+    'processing': 'Processing',
+    'committee_review': 'Committee Review',
+    'president_approval': 'President Approval',
+    'board_ratify': 'Board Ratify',
+    'sba_submitted': 'SBA Submitted',
+    'sba_authorized': 'SBA Authorized',
+    'closing': 'Closing',
+    'funded': 'Funded',
+    'servicing': 'Servicing',
+    'paid_off': 'Paid Off',
+    'cancelled': 'Cancelled',
+    'charged_off': 'Charged Off',
+    'liquidated': 'Liquidated'
+};
+
+// Loan Status Colors for UI
+export const LOAN_STATUS_COLORS: Record<LoanStatus, string> = {
+    'prospect': '#9CA3AF',       // Gray
+    'application': '#3B82F6',    // Blue
+    'processing': '#8B5CF6',     // Purple
+    'committee_review': '#F59E0B', // Amber
+    'president_approval': '#F59E0B',
+    'board_ratify': '#F59E0B',
+    'sba_submitted': '#06B6D4',  // Cyan
+    'sba_authorized': '#10B981', // Green
+    'closing': '#22C55E',        // Light Green
+    'funded': '#059669',         // Emerald
+    'servicing': '#0EA5E9',      // Sky
+    'paid_off': '#14532D',       // Dark Green
+    'cancelled': '#EF4444',      // Red
+    'charged_off': '#DC2626',    // Dark Red
+    'liquidated': '#991B1B'      // Very Dark Red
+};
+
+// Risk Level Labels
+export const LOAN_RISK_LABELS: Record<LoanRiskLevel, string> = {
+    'low': 'Low Risk',
+    'medium': 'Medium Risk',
+    'high': 'High Risk',
+    'very_high': 'Very High Risk'
+};
+
+// Risk Level Colors
+export const LOAN_RISK_COLORS: Record<LoanRiskLevel, string> = {
+    'low': '#10B981',      // Green
+    'medium': '#F59E0B',   // Amber
+    'high': '#EF4444',     // Red
+    'very_high': '#7F1D1D' // Dark Red
+};
+
+// Common Rate Indexes
+export const RATE_INDEXES = [
+    'Prime',
+    'Prime + 0.5',
+    'Prime + 1.0',
+    'Prime + 1.5',
+    'Prime + 2.0',
+    'SOFR',
+    'SOFR + 2.50',
+    'SOFR + 3.00',
+    '5-Year Treasury',
+    '10-Year Treasury',
+    'Fixed'
+] as const;
+
+// US States for dropdowns
+export const US_STATES = [
+    { code: 'AL', name: 'Alabama' },
+    { code: 'AK', name: 'Alaska' },
+    { code: 'AZ', name: 'Arizona' },
+    { code: 'AR', name: 'Arkansas' },
+    { code: 'CA', name: 'California' },
+    { code: 'CO', name: 'Colorado' },
+    { code: 'CT', name: 'Connecticut' },
+    { code: 'DE', name: 'Delaware' },
+    { code: 'FL', name: 'Florida' },
+    { code: 'GA', name: 'Georgia' },
+    { code: 'HI', name: 'Hawaii' },
+    { code: 'ID', name: 'Idaho' },
+    { code: 'IL', name: 'Illinois' },
+    { code: 'IN', name: 'Indiana' },
+    { code: 'IA', name: 'Iowa' },
+    { code: 'KS', name: 'Kansas' },
+    { code: 'KY', name: 'Kentucky' },
+    { code: 'LA', name: 'Louisiana' },
+    { code: 'ME', name: 'Maine' },
+    { code: 'MD', name: 'Maryland' },
+    { code: 'MA', name: 'Massachusetts' },
+    { code: 'MI', name: 'Michigan' },
+    { code: 'MN', name: 'Minnesota' },
+    { code: 'MS', name: 'Mississippi' },
+    { code: 'MO', name: 'Missouri' },
+    { code: 'MT', name: 'Montana' },
+    { code: 'NE', name: 'Nebraska' },
+    { code: 'NV', name: 'Nevada' },
+    { code: 'NH', name: 'New Hampshire' },
+    { code: 'NJ', name: 'New Jersey' },
+    { code: 'NM', name: 'New Mexico' },
+    { code: 'NY', name: 'New York' },
+    { code: 'NC', name: 'North Carolina' },
+    { code: 'ND', name: 'North Dakota' },
+    { code: 'OH', name: 'Ohio' },
+    { code: 'OK', name: 'Oklahoma' },
+    { code: 'OR', name: 'Oregon' },
+    { code: 'PA', name: 'Pennsylvania' },
+    { code: 'RI', name: 'Rhode Island' },
+    { code: 'SC', name: 'South Carolina' },
+    { code: 'SD', name: 'South Dakota' },
+    { code: 'TN', name: 'Tennessee' },
+    { code: 'TX', name: 'Texas' },
+    { code: 'UT', name: 'Utah' },
+    { code: 'VT', name: 'Vermont' },
+    { code: 'VA', name: 'Virginia' },
+    { code: 'WA', name: 'Washington' },
+    { code: 'WV', name: 'West Virginia' },
+    { code: 'WI', name: 'Wisconsin' },
+    { code: 'WY', name: 'Wyoming' },
+    { code: 'DC', name: 'District of Columbia' }
+] as const;
+
+// Helper function to calculate borrower down payment
+export function calculateBorrowerDown(totalProject: number, thirdParty1st: number, netDebenture: number): number {
+    return Math.max(0, totalProject - thirdParty1st - netDebenture);
+}
+
+// Helper function to calculate gross debenture
+export function calculateGrossDebenture(netDebenture: number, originationFee: number, servicingFee: number): number {
+    return netDebenture + originationFee + servicingFee;
+}
+
+// Helper function to calculate SBA 1/2 point fee
+export function calculateSbaHalfPoint(netDebenture: number): number {
+    return netDebenture * 0.005;
+}
+
+// Helper function to get jobs per million (SBA metric)
+export function calculateJobsPerMillion(totalProject: number, jobsCreated: number, jobsRetained: number): number {
+    const totalJobs = jobsCreated + jobsRetained;
+    const projectInMillions = totalProject / 1000000;
+    return projectInMillions > 0 ? totalJobs / projectInMillions : 0;
 }
