@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Lead, Sba504LoanData, LoanStatus } from '@leads/shared';
 
 interface LoanDetailFormProps {
@@ -20,10 +20,92 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
     { id: 'servicing', label: 'Servicing', icon: '📈' },
 ];
 
+// ============================================
+// LOAN CALCULATION ENGINE
+// ============================================
+
+interface CalculationResult {
+    netDebenture: number;
+    borrowerDown: number;
+    grossDebenture: number;
+    originationFee: number;
+    servicingFee: number;
+    sbaHalfPoint: number;
+    ltv: number;
+    dscr: number | null;
+    jobsPerMillion: number;
+}
+
+// SBA 504 Standard Fee Rates
+const FEE_RATES = {
+    originationFeeRate: 0.015, // 1.5% of net debenture
+    servicingFeeRate: 0.00625, // 0.625% annual (one-time often 0.5-1%)
+    sbaHalfPointRate: 0.005, // 0.5% of net debenture
+    cdcProcessingFee: 2500, // Flat fee
+};
+
+// Calculate all derived values
+const calculateLoanStructure = (
+    totalProject: number,
+    thirdParty1st: number,
+    debenturePercent: number = 0.40 // 40% is standard 504 debenture
+): CalculationResult => {
+    // Net Debenture = 40% of total project (standard 504)
+    const netDebenture = totalProject * debenturePercent;
+
+    // Borrower Down = Total - 1st - Debenture
+    const borrowerDown = Math.max(0, totalProject - thirdParty1st - netDebenture);
+
+    // Fees based on net debenture
+    const originationFee = netDebenture * FEE_RATES.originationFeeRate;
+    const servicingFee = netDebenture * FEE_RATES.servicingFeeRate;
+    const sbaHalfPoint = netDebenture * FEE_RATES.sbaHalfPointRate;
+
+    // Gross Debenture includes fees
+    const grossDebenture = netDebenture + originationFee + servicingFee + sbaHalfPoint + FEE_RATES.cdcProcessingFee;
+
+    // LTV (Loan-to-Value) - combined lien positions
+    const ltv = totalProject > 0 ? ((thirdParty1st + netDebenture) / totalProject) * 100 : 0;
+
+    return {
+        netDebenture,
+        borrowerDown,
+        grossDebenture,
+        originationFee,
+        servicingFee,
+        sbaHalfPoint,
+        ltv,
+        dscr: null, // Needs income data
+        jobsPerMillion: 0, // Needs jobs data
+    };
+};
+
 export const LoanDetailForm: React.FC<LoanDetailFormProps> = ({ lead, onSave, onClose }) => {
     const [activeTab, setActiveTab] = useState<TabId>('borrower');
     const [loanData, setLoanData] = useState<Sba504LoanData>(lead.sba504 || {});
     const [isSaving, setIsSaving] = useState(false);
+    const [autoCalculate, setAutoCalculate] = useState(true);
+    const [calculations, setCalculations] = useState<CalculationResult | null>(null);
+
+    // Auto-calculate when relevant fields change
+    useEffect(() => {
+        if (autoCalculate && loanData.financial) {
+            const totalProject = loanData.financial.totalProject || 0;
+            const thirdParty1st = loanData.financial.thirdParty1st || 0;
+
+            if (totalProject > 0) {
+                const result = calculateLoanStructure(totalProject, thirdParty1st);
+                setCalculations(result);
+
+                // Also calculate jobs per million if we have jobs data
+                if (loanData.jobs) {
+                    const totalJobs = (loanData.jobs.jobsCreated || 0) + (loanData.jobs.jobsRetained || 0);
+                    const projectInMillions = totalProject / 1000000;
+                    result.jobsPerMillion = projectInMillions > 0 ? totalJobs / projectInMillions : 0;
+                }
+            }
+        }
+    }, [autoCalculate, loanData.financial?.totalProject, loanData.financial?.thirdParty1st, loanData.jobs]);
 
     const updateLoanData = (section: keyof Sba504LoanData, field: string, value: any) => {
         setLoanData(prev => ({
@@ -41,6 +123,24 @@ export const LoanDetailForm: React.FC<LoanDetailFormProps> = ({ lead, onSave, on
             [field]: value
         }));
     };
+
+    // Apply calculated values to loan data
+    const applyCalculations = useCallback(() => {
+        if (!calculations) return;
+
+        setLoanData(prev => ({
+            ...prev,
+            financial: {
+                ...prev.financial,
+                netDebenture: calculations.netDebenture,
+                borrowerDown: calculations.borrowerDown,
+                grossDebenture: calculations.grossDebenture,
+                originationFee: calculations.originationFee,
+                servicingFee: calculations.servicingFee,
+                sbaHalfPoint: calculations.sbaHalfPoint,
+            }
+        }));
+    }, [calculations]);
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -132,6 +232,10 @@ export const LoanDetailForm: React.FC<LoanDetailFormProps> = ({ lead, onSave, on
                     <StructureTab
                         data={loanData.financial || {}}
                         jobs={loanData.jobs || {}}
+                        calculations={calculations}
+                        autoCalculate={autoCalculate}
+                        onAutoCalculateChange={setAutoCalculate}
+                        onApplyCalculations={applyCalculations}
                         onChange={(field, value) => updateLoanData('financial', field, value)}
                         onJobsChange={(field, value) => updateLoanData('jobs', field, value)}
                     />
@@ -255,41 +359,126 @@ const PropertyTab: React.FC<PropertyTabProps> = ({ data, characteristics, onChan
 interface StructureTabProps {
     data: any;
     jobs: any;
+    calculations: CalculationResult | null;
+    autoCalculate: boolean;
+    onAutoCalculateChange: (value: boolean) => void;
+    onApplyCalculations: () => void;
     onChange: (field: string, value: any) => void;
     onJobsChange: (field: string, value: any) => void;
 }
 
-const StructureTab: React.FC<StructureTabProps> = ({ data, jobs, onChange, onJobsChange }) => (
-    <div className="form-section">
-        <h3>Financial Structure</h3>
-        <div className="form-grid">
-            <CurrencyField label="Total Project" value={data.totalProject} onChange={(v) => onChange('totalProject', v)} />
-            <CurrencyField label="Third Party 1st" value={data.thirdParty1st} onChange={(v) => onChange('thirdParty1st', v)} />
-            <CurrencyField label="Net Debenture" value={data.netDebenture} onChange={(v) => onChange('netDebenture', v)} />
-            <CurrencyField label="Interim Loan" value={data.interim} onChange={(v) => onChange('interim', v)} />
-            <CurrencyField label="Borrower Down" value={data.borrowerDown} onChange={(v) => onChange('borrowerDown', v)} />
-            <CurrencyField label="Gross Debenture" value={data.grossDebenture} onChange={(v) => onChange('grossDebenture', v)} />
-        </div>
+const StructureTab: React.FC<StructureTabProps> = ({
+    data, jobs, calculations, autoCalculate,
+    onAutoCalculateChange, onApplyCalculations, onChange, onJobsChange
+}) => {
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            maximumFractionDigits: 0
+        }).format(value);
+    };
 
-        <h3>Fees</h3>
-        <div className="form-grid">
-            <CurrencyField label="Origination Fee" value={data.originationFee} onChange={(v) => onChange('originationFee', v)} />
-            <CurrencyField label="Servicing Fee" value={data.servicingFee} onChange={(v) => onChange('servicingFee', v)} />
-            <CurrencyField label="Closing Fee" value={data.closingFee} onChange={(v) => onChange('closingFee', v)} />
-            <CurrencyField label="SBA 1/2 Point" value={data.sbaHalfPoint} onChange={(v) => onChange('sbaHalfPoint', v)} />
-            <DateField label="1/2 Point Received" value={data.halfPointDateReceived} onChange={(v) => onChange('halfPointDateReceived', v)} />
-        </div>
+    return (
+        <div className="form-section">
+            {/* Calculator Panel */}
+            {calculations && (
+                <div className="calculation-panel">
+                    <div className="calc-header">
+                        <h4>🧮 Deal Calculator</h4>
+                        <label className="auto-calc-toggle">
+                            <input
+                                type="checkbox"
+                                checked={autoCalculate}
+                                onChange={(e) => onAutoCalculateChange(e.target.checked)}
+                            />
+                            Auto-Calculate
+                        </label>
+                    </div>
 
-        <h3>Jobs Impact (SBA Requirement)</h3>
-        <div className="form-grid">
-            <NumberField label="Jobs Before Project" value={jobs.jobsBeforeProject} onChange={(v) => onJobsChange('jobsBeforeProject', v)} />
-            <NumberField label="Jobs Created" value={jobs.jobsCreated} onChange={(v) => onJobsChange('jobsCreated', v)} />
-            <NumberField label="Jobs Retained" value={jobs.jobsRetained} onChange={(v) => onJobsChange('jobsRetained', v)} />
-            <NumberField label="2-Year Projected" value={jobs.jobs2YrsProjected} onChange={(v) => onJobsChange('jobs2YrsProjected', v)} />
-            <NumberField label="2-Year Actual" value={jobs.jobs2YrsActual} onChange={(v) => onJobsChange('jobs2YrsActual', v)} />
+                    <div className="calc-grid">
+                        <div className="calc-item">
+                            <span className="calc-label">Net Debenture (40%)</span>
+                            <span className="calc-value">{formatCurrency(calculations.netDebenture)}</span>
+                        </div>
+                        <div className="calc-item">
+                            <span className="calc-label">Borrower Equity</span>
+                            <span className="calc-value highlight-green">{formatCurrency(calculations.borrowerDown)}</span>
+                        </div>
+                        <div className="calc-item">
+                            <span className="calc-label">Gross Debenture</span>
+                            <span className="calc-value">{formatCurrency(calculations.grossDebenture)}</span>
+                        </div>
+                        <div className="calc-item">
+                            <span className="calc-label">Combined LTV</span>
+                            <span className="calc-value">{calculations.ltv.toFixed(1)}%</span>
+                        </div>
+                    </div>
+
+                    <div className="calc-fees">
+                        <h5>Estimated Fees</h5>
+                        <div className="fee-row">
+                            <span>Origination Fee (1.5%)</span>
+                            <span>{formatCurrency(calculations.originationFee)}</span>
+                        </div>
+                        <div className="fee-row">
+                            <span>Servicing Fee (0.625%)</span>
+                            <span>{formatCurrency(calculations.servicingFee)}</span>
+                        </div>
+                        <div className="fee-row">
+                            <span>SBA 1/2 Point (0.5%)</span>
+                            <span>{formatCurrency(calculations.sbaHalfPoint)}</span>
+                        </div>
+                        <div className="fee-row">
+                            <span>CDC Processing Fee</span>
+                            <span>$2,500</span>
+                        </div>
+                    </div>
+
+                    {calculations.jobsPerMillion > 0 && (
+                        <div className="jobs-metric">
+                            <span className="metric-label">Jobs per $Million</span>
+                            <span className="metric-value">{calculations.jobsPerMillion.toFixed(1)}</span>
+                            <span className="metric-note">SBA Target: 1.0+</span>
+                        </div>
+                    )}
+
+                    <button className="btn-apply-calc" onClick={onApplyCalculations}>
+                        ✓ Apply Calculated Values
+                    </button>
+                </div>
+            )}
+
+            <h3>Financial Structure</h3>
+            <div className="form-grid">
+                <CurrencyField label="Total Project" value={data.totalProject} onChange={(v) => onChange('totalProject', v)} />
+                <CurrencyField label="Third Party 1st" value={data.thirdParty1st} onChange={(v) => onChange('thirdParty1st', v)} />
+                <CurrencyField label="Net Debenture" value={data.netDebenture} onChange={(v) => onChange('netDebenture', v)} />
+                <CurrencyField label="Interim Loan" value={data.interim} onChange={(v) => onChange('interim', v)} />
+                <CurrencyField label="Borrower Down" value={data.borrowerDown} onChange={(v) => onChange('borrowerDown', v)} />
+                <CurrencyField label="Gross Debenture" value={data.grossDebenture} onChange={(v) => onChange('grossDebenture', v)} />
+            </div>
+
+            <h3>Fees</h3>
+            <div className="form-grid">
+                <CurrencyField label="Origination Fee" value={data.originationFee} onChange={(v) => onChange('originationFee', v)} />
+                <CurrencyField label="Servicing Fee" value={data.servicingFee} onChange={(v) => onChange('servicingFee', v)} />
+                <CurrencyField label="Closing Fee" value={data.closingFee} onChange={(v) => onChange('closingFee', v)} />
+                <CurrencyField label="SBA 1/2 Point" value={data.sbaHalfPoint} onChange={(v) => onChange('sbaHalfPoint', v)} />
+                <DateField label="1/2 Point Received" value={data.halfPointDateReceived} onChange={(v) => onChange('halfPointDateReceived', v)} />
+            </div>
+
+            <h3>Jobs Impact (SBA Requirement)</h3>
+            <div className="form-grid">
+                <NumberField label="Jobs Before Project" value={jobs.jobsBeforeProject} onChange={(v) => onJobsChange('jobsBeforeProject', v)} />
+                <NumberField label="Jobs Created" value={jobs.jobsCreated} onChange={(v) => onJobsChange('jobsCreated', v)} />
+                <NumberField label="Jobs Retained" value={jobs.jobsRetained} onChange={(v) => onJobsChange('jobsRetained', v)} />
+                <NumberField label="2-Year Projected" value={jobs.jobs2YrsProjected} onChange={(v) => onJobsChange('jobs2YrsProjected', v)} />
+                <NumberField label="2-Year Actual" value={jobs.jobs2YrsActual} onChange={(v) => onJobsChange('jobs2YrsActual', v)} />
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 interface RatesTabProps {
     data: any;
