@@ -40,6 +40,13 @@ model Lead {
   processingPriority String?
   targetClosingDate  String?
   closingItems       Json?
+
+  // BDO / Qualification
+  sbaFit             String?   // "504", "7a", "Unknown"
+  leadScore          Int?      // 0-100
+  dealStage          String?   // "Prospecting", "Qualified", "Proposal", "Underwriting"
+  dealStructure      Json?     // Saved sources & uses structure
+  qualificationData  Json?     // BDO Checklist State
   
   // Timestamps
   createdAt     DateTime @default(now())

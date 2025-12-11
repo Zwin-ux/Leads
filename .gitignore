@@ -31,3 +31,10 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+*.zip
+*.tar.gz
+api_logs/
+.kiro/
+deploy/
+deploy_*/
+test-results/

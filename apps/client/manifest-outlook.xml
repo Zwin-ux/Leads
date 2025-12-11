@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides"
+  xsi:type="MailApp">
+
+  <Id>c39c2d90-2d90-4d90-902d-902d902d902e</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>AmPac</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Lead Sheets Sidecar" />
+  <Description DefaultValue="View AmPac Leads directly in Outlook." />
+  <IconUrl DefaultValue="https://black-smoke-0f61cd71e.3.azurestaticapps.net/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://black-smoke-0f61cd71e.3.azurestaticapps.net/assets/icon-64.png" />
+  <SupportUrl DefaultValue="https://www.ampac.com" />
+
+  <AppDomains>
+    <AppDomain>https://black-smoke-0f61cd71e.3.azurestaticapps.net</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.1" />
+    </Sets>
+  </Requirements>
+
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://black-smoke-0f61cd71e.3.azurestaticapps.net/outlook" />
+        <RequestedHeight>250</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+
+  <Permissions>ReadWriteItem</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
+  </Rule>
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
+</OfficeApp>

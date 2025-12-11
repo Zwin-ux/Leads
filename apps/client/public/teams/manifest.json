@@ -2,7 +2,7 @@
     "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
     "manifestVersion": "1.16",
     "version": "1.0.0",
-    "id": "c39c2d90-2d90-4d90-902d-902d902d902d",
+    "id": "7f348450-4d2c-4235-867d-925b61005086",
     "packageName": "com.ampac.leadsheets",
     "developer": {
         "name": "AmPac",
@@ -27,8 +27,8 @@
         {
             "entityId": "leadsToday",
             "name": "Today",
-            "contentUrl": "https://localhost:3000/index.html?context=teams",
-            "websiteUrl": "https://localhost:3000/index.html",
+            "contentUrl": "https://lemon-mud-04150b00f.3.azurestaticapps.net/index.html?context=teams",
+            "websiteUrl": "https://lemon-mud-04150b00f.3.azurestaticapps.net/index.html",
             "scopes": [
                 "personal"
             ]
@@ -39,6 +39,7 @@
         "messageTeamMembers"
     ],
     "validDomains": [
-        "localhost"
+        "lemon-mud-04150b00f.3.azurestaticapps.net",
+        "ampacbrain-awbwbhf4cyhwg6a9.canadacentral-01.azurewebsites.net"
     ]
 }
