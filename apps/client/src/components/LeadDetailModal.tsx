@@ -10,6 +10,7 @@ import { EmailAction } from './EmailAction';
 import { BDOQualificationChecklist } from './BDOQualificationChecklist';
 import { DealStructureCalculator } from './DealStructureCalculator';
 import { graphService, type EmailThread } from '../services/graphService';
+import { LoanDetailModal } from './LoanDetailModal';
 
 interface LeadDetailModalProps {
     lead: Lead;
@@ -26,6 +27,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
     const [aiAnalysis, setAiAnalysis] = useState('');
     const [loadingAi, setLoadingAi] = useState(false);
     const [showTransfer, setShowTransfer] = useState(false);
+    const [showLoanDetail, setShowLoanDetail] = useState(false);
 
     // Snapshot Edit State
     const [isEditingSnapshot, setIsEditingSnapshot] = useState(false);
@@ -289,620 +291,624 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
     const stageStyle = getStageColor(lead.stage);
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content large">
-                {/* === ENHANCED HEADER === */}
-                <div className="modal-header enhanced">
-                    <div className="header-top-row">
-                        <div className="company-info">
-                            <h2>{lead.company || lead.businessName || 'Unknown Company'}</h2>
-                            {lead.businessName && lead.businessName !== lead.company && (
-                                <span className="legal-name">Legal: {lead.businessName}</span>
-                            )}
+        <>
+            <div className="modal-overlay">
+                <div className="modal-content large">
+                    {/* === ENHANCED HEADER === */}
+                    <div className="modal-header enhanced">
+                        <div className="header-top-row">
+                            <div className="company-info">
+                                <h2>{lead.company || lead.businessName || 'Unknown Company'}</h2>
+                                {lead.businessName && lead.businessName !== lead.company && (
+                                    <span className="legal-name">Legal: {lead.businessName}</span>
+                                )}
+                            </div>
+                            <div className="header-actions">
+                                {lead.loanProgram === '504' && (
+                                    <button className="btn-primary" onClick={() => setShowLoanDetail(true)}>📋 SBA 504 Details</button>
+                                )}
+                                <button className="btn-secondary" onClick={() => setShowTransfer(true)}>Transfer</button>
+                                <button className="btn-secondary" onClick={handleSendNow}>Request Docs</button>
+                                {onDelete && <button className="btn-icon delete" onClick={handleDeleteLead} title="Delete Lead">×</button>}
+                                <button className="close-btn" onClick={onClose}>&times;</button>
+                            </div>
                         </div>
-                        <div className="header-actions">
-                            <button className="btn-secondary" onClick={() => setShowTransfer(true)}>Transfer</button>
-                            <button className="btn-secondary" onClick={handleSendNow}>Request Docs</button>
-                            {onDelete && <button className="btn-icon delete" onClick={handleDeleteLead} title="Delete Lead">×</button>}
-                            <button className="close-btn" onClick={onClose}>&times;</button>
+
+                        {/* Status Bar - Always Visible */}
+                        <div className="header-status-bar">
+                            <div className="status-item">
+                                <span className="status-label">BDO</span>
+                                <span className="status-value owner">{lead.owner || 'Unassigned'}</span>
+                            </div>
+                            <div className="status-divider" />
+                            <div className="status-item">
+                                <span className="status-label">Stage</span>
+                                <span className="status-value stage" style={{ background: stageStyle.bg, color: stageStyle.color }}>
+                                    {lead.stage}
+                                </span>
+                            </div>
+                            <div className="status-divider" />
+                            <div className="status-item">
+                                <span className="status-label">Deal Stage</span>
+                                <span className="status-value">{lead.dealStage || 'Prospecting'}</span>
+                            </div>
+                            <div className="status-divider" />
+                            <div className="status-item">
+                                <span className="status-label">Program</span>
+                                <span className="status-value program">{lead.loanProgram || 'Unknown'}</span>
+                            </div>
+                            <div className="status-divider" />
+                            <div className="status-item">
+                                <span className="status-label">Last Touch</span>
+                                <span
+                                    className={`status-value stale ${staleInfo.pulse ? 'pulse' : ''}`}
+                                    style={{ color: staleInfo.color }}
+                                >
+                                    {staleInfo.label}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Status Bar - Always Visible */}
-                    <div className="header-status-bar">
-                        <div className="status-item">
-                            <span className="status-label">BDO</span>
-                            <span className="status-value owner">{lead.owner || 'Unassigned'}</span>
-                        </div>
-                        <div className="status-divider" />
-                        <div className="status-item">
-                            <span className="status-label">Stage</span>
-                            <span className="status-value stage" style={{ background: stageStyle.bg, color: stageStyle.color }}>
-                                {lead.stage}
-                            </span>
-                        </div>
-                        <div className="status-divider" />
-                        <div className="status-item">
-                            <span className="status-label">Deal Stage</span>
-                            <span className="status-value">{lead.dealStage || 'Prospecting'}</span>
-                        </div>
-                        <div className="status-divider" />
-                        <div className="status-item">
-                            <span className="status-label">Program</span>
-                            <span className="status-value program">{lead.loanProgram || 'Unknown'}</span>
-                        </div>
-                        <div className="status-divider" />
-                        <div className="status-item">
-                            <span className="status-label">Last Touch</span>
-                            <span
-                                className={`status-value stale ${staleInfo.pulse ? 'pulse' : ''}`}
-                                style={{ color: staleInfo.color }}
-                            >
-                                {staleInfo.label}
-                            </span>
-                        </div>
+                    <div className="modal-tabs">
+                        <button className={activeTab === 'snapshot' ? 'active' : ''} onClick={() => setActiveTab('snapshot')}>Deal Info</button>
+                        <button className={activeTab === 'documents' ? 'active' : ''} onClick={() => setActiveTab('documents')}>Documents</button>
+                        <button className={activeTab === 'qualification' ? 'active' : ''} onClick={() => setActiveTab('qualification')}>Qualification</button>
+                        <button className={activeTab === 'notes' ? 'active' : ''} onClick={() => setActiveTab('notes')}>Notes</button>
+                        <button className={activeTab === 'closing' ? 'active' : ''} onClick={() => setActiveTab('closing')}>Closing</button>
+                        <button className={activeTab === 'partners' ? 'active' : ''} onClick={() => setActiveTab('partners')}>Bank Partners</button>
+                        <button className={activeTab === 'contacts' ? 'active' : ''} onClick={() => setActiveTab('contacts')}>Contacts ({contacts.length})</button>
+                        <button className={activeTab === 'activity' ? 'active' : ''} onClick={() => setActiveTab('activity')}>Activity</button>
+                        <button className={activeTab === 'research' ? 'active' : ''} onClick={() => setActiveTab('research')}>AI</button>
                     </div>
-                </div>
 
-                <div className="modal-tabs">
-                    <button className={activeTab === 'snapshot' ? 'active' : ''} onClick={() => setActiveTab('snapshot')}>Deal Info</button>
-                    <button className={activeTab === 'documents' ? 'active' : ''} onClick={() => setActiveTab('documents')}>Documents</button>
-                    <button className={activeTab === 'qualification' ? 'active' : ''} onClick={() => setActiveTab('qualification')}>Qualification</button>
-                    <button className={activeTab === 'notes' ? 'active' : ''} onClick={() => setActiveTab('notes')}>Notes</button>
-                    <button className={activeTab === 'closing' ? 'active' : ''} onClick={() => setActiveTab('closing')}>Closing</button>
-                    <button className={activeTab === 'partners' ? 'active' : ''} onClick={() => setActiveTab('partners')}>Bank Partners</button>
-                    <button className={activeTab === 'contacts' ? 'active' : ''} onClick={() => setActiveTab('contacts')}>Contacts ({contacts.length})</button>
-                    <button className={activeTab === 'activity' ? 'active' : ''} onClick={() => setActiveTab('activity')}>Activity</button>
-                    <button className={activeTab === 'research' ? 'active' : ''} onClick={() => setActiveTab('research')}>AI</button>
-                </div>
-
-                <div className="modal-body">
-                    {activeTab === 'snapshot' && (
-                        <div className="snapshot-view">
-                            <div className="snapshot-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <EmailAction
-                                        to={lead.email}
-                                        subject={`SBA 504 Loan Options for ${lead.company || lead.businessName}`}
-                                        body={`Hi ${lead.firstName},\n\nI reviewed your business profile and believe you might be a great fit for the SBA 504 loan program. Do you have 10 minutes to chat?\n\nBest,\nAmPac Team`}
-                                        label="Intro Email"
-                                        variant="secondary"
-                                        icon="👋"
-                                    />
-                                    <EmailAction
-                                        to={lead.email}
-                                        subject={`Following up: SBA 504 Loan for ${lead.company || lead.businessName}`}
-                                        body={`Hi ${lead.firstName},\n\nJust checking back on my previous note. Are you still interested in discussing financing options?\n\nBest,\nAmPac Team`}
-                                        label="Follow Up"
-                                        variant="secondary"
-                                        icon="eye" // using simpler icon
-                                    />
-                                </div>
-                                {isEditingSnapshot ? (
-                                    <div className="edit-actions">
-                                        <button className="btn-text" onClick={() => setIsEditingSnapshot(false)}>Cancel</button>
-                                        <button className="btn-primary" onClick={handleSaveSnapshot}>Save Changes</button>
+                    <div className="modal-body">
+                        {activeTab === 'snapshot' && (
+                            <div className="snapshot-view">
+                                <div className="snapshot-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <EmailAction
+                                            to={lead.email}
+                                            subject={`SBA 504 Loan Options for ${lead.company || lead.businessName}`}
+                                            body={`Hi ${lead.firstName},\n\nI reviewed your business profile and believe you might be a great fit for the SBA 504 loan program. Do you have 10 minutes to chat?\n\nBest,\nAmPac Team`}
+                                            label="Intro Email"
+                                            variant="secondary"
+                                            icon="👋"
+                                        />
+                                        <EmailAction
+                                            to={lead.email}
+                                            subject={`Following up: SBA 504 Loan for ${lead.company || lead.businessName}`}
+                                            body={`Hi ${lead.firstName},\n\nJust checking back on my previous note. Are you still interested in discussing financing options?\n\nBest,\nAmPac Team`}
+                                            label="Follow Up"
+                                            variant="secondary"
+                                            icon="eye" // using simpler icon
+                                        />
                                     </div>
-                                ) : (
-                                    <button className="btn-text" onClick={() => setIsEditingSnapshot(true)}>✏️ Edit Details</button>
-                                )}
-                            </div>
-
-                            <div className="info-grid">
-                                <div className="info-item">
-                                    <label>First Name</label>
                                     {isEditingSnapshot ? (
-                                        <input
-                                            value={snapshotData.firstName}
-                                            onChange={e => setSnapshotData({ ...snapshotData, firstName: e.target.value })}
-                                            className="edit-input"
-                                        />
-                                    ) : (
-                                        <p>{lead.firstName}</p>
-                                    )}
-                                </div>
-                                <div className="info-item">
-                                    <label>Last Name</label>
-                                    {isEditingSnapshot ? (
-                                        <input
-                                            value={snapshotData.lastName}
-                                            onChange={e => setSnapshotData({ ...snapshotData, lastName: e.target.value })}
-                                            className="edit-input"
-                                        />
-                                    ) : (
-                                        <p>{lead.lastName}</p>
-                                    )}
-                                </div>
-                                <div className="info-item">
-                                    <label>Email</label>
-                                    {isEditingSnapshot ? (
-                                        <input
-                                            value={snapshotData.email}
-                                            onChange={e => setSnapshotData({ ...snapshotData, email: e.target.value })}
-                                            className="edit-input"
-                                        />
-                                    ) : (
-                                        <p><a href={`mailto:${lead.email}`}>{lead.email}</a></p>
-                                    )}
-                                </div>
-                                <div className="info-item">
-                                    <label>Phone</label>
-                                    {isEditingSnapshot ? (
-                                        <input
-                                            value={snapshotData.phone || ''}
-                                            onChange={e => setSnapshotData({ ...snapshotData, phone: e.target.value })}
-                                            className="edit-input"
-                                        />
-                                    ) : (
-                                        <p>{lead.phone || '--'}</p>
-                                    )}
-                                </div>
-                                <div className="info-item">
-                                    <label>Program</label>
-                                    {isEditingSnapshot ? (
-                                        <select
-                                            value={snapshotData.loanProgram || 'SBA 504'}
-                                            onChange={e => setSnapshotData({ ...snapshotData, loanProgram: e.target.value as any })}
-                                            className="edit-input"
-                                        >
-                                            <option value="SBA 504">SBA 504</option>
-                                            <option value="SBA 7a">SBA 7a</option>
-                                            <option value="Conventional">Conventional</option>
-                                        </select>
-                                    ) : (
-                                        <p>{lead.loanProgram || 'SBA 504'}</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="ai-section">
-                                <h3>AI Email Drafter</h3>
-                                <p className="hint">Generate a personalized intro email based on this lead's profile.</p>
-                                {aiEmail ? (
-                                    <div className="email-preview">
-                                        <textarea
-                                            className="email-editor"
-                                            value={aiEmail}
-                                            onChange={(e) => setAiEmail(e.target.value)}
-                                        />
-                                        <div className="email-actions">
-                                            <button className="btn-secondary" onClick={() => window.open(`mailto:${lead.email}?subject=Intro&body=${encodeURIComponent(aiEmail)}`)}>Open in Outlook</button>
-                                            <button className="btn-text" onClick={() => setAiEmail('')}>Discard</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <button className="btn-primary" onClick={handleGenerateEmail} disabled={loadingAi}>
-                                        {loadingAi ? 'Drafting...' : '✨ Draft Intro Email'}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'contacts' && (
-                        <div className="contacts-view">
-                            <div className="contacts-list">
-                                {contacts.map(contact => (
-                                    <div key={contact.id} className={`contact-card ${contact.isPrimary ? 'primary' : ''}`}>
-                                        <div className="contact-info">
-                                            <h4>
-                                                {contact.name}
-                                                {contact.isPrimary && <span className="primary-badge">Primary</span>}
-                                            </h4>
-                                            <p className="role">{contact.role}</p>
-                                            <p className="contact-details">
-                                                {contact.email && <span>📧 {contact.email}</span>}
-                                                {contact.phone && <span>📱 {contact.phone}</span>}
-                                            </p>
-                                        </div>
-                                        <div className="contact-actions">
-                                            {!contact.isPrimary && (
-                                                <button className="btn-text" onClick={() => handleSetPrimary(contact.id)}>Set Primary</button>
-                                            )}
-                                            <button className="btn-icon" onClick={() => openEditContact(contact)}>✏️</button>
-                                            <button className="btn-icon delete" onClick={() => handleDeleteContact(contact.id)}>🗑️</button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {contacts.length === 0 && <p className="empty-text">No additional contacts added.</p>}
-                            </div>
-
-                            {showAddContact ? (
-                                <div className="add-contact-form">
-                                    <h4>{editingContact ? 'Edit Contact' : 'Add New Contact'}</h4>
-                                    <div className="form-row">
-                                        <input
-                                            placeholder="Name"
-                                            value={newContact.name || ''}
-                                            onChange={e => setNewContact({ ...newContact, name: e.target.value })}
-                                        />
-                                        <input
-                                            placeholder="Role (e.g. CFO)"
-                                            value={newContact.role || ''}
-                                            onChange={e => setNewContact({ ...newContact, role: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="form-row">
-                                        <input
-                                            placeholder="Email"
-                                            value={newContact.email || ''}
-                                            onChange={e => setNewContact({ ...newContact, email: e.target.value })}
-                                        />
-                                        <input
-                                            placeholder="Phone"
-                                            value={newContact.phone || ''}
-                                            onChange={e => setNewContact({ ...newContact, phone: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="form-actions">
-                                        <button className="btn-primary" onClick={handleSaveContact}>Save Contact</button>
-                                        <button className="btn-secondary" onClick={() => {
-                                            setShowAddContact(false);
-                                            setEditingContact(null);
-                                            setNewContact({});
-                                        }}>Cancel</button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <button className="btn-dashed" onClick={() => setShowAddContact(true)}>+ Add Contact</button>
-                            )}
-                        </div>
-                    )}
-
-                    {activeTab === 'documents' && (
-                        <div className="documents-view">
-                            <DocumentChecklist
-                                lead={lead}
-                                onUpdateDocument={(docId, updates) => {
-                                    const docs = lead.documents || [];
-                                    const existingIdx = docs.findIndex(d => d.id === docId);
-                                    let newDocs;
-                                    if (existingIdx >= 0) {
-                                        newDocs = [...docs];
-                                        newDocs[existingIdx] = { ...newDocs[existingIdx], ...updates };
-                                    } else {
-                                        // Add new doc
-                                        newDocs = [...docs, { id: docId, ...updates } as Document];
-                                    }
-                                    onUpdate({ ...lead, documents: newDocs });
-                                }}
-                                onRequestDocs={(_docTypes) => {
-                                    const sendNowUrl = 'https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/r1';
-                                    window.open(sendNowUrl, '_blank');
-                                }}
-                                onApplyTemplate={(template) => {
-                                    // Merge template with existing docs
-                                    const currentDocs = lead.documents || [];
-                                    const newDocs = [...currentDocs];
-
-                                    template.forEach(type => {
-                                        if (!newDocs.find(d => d.type === type)) {
-                                            newDocs.push({
-                                                id: `doc-${type}-${Date.now()}`,
-                                                type,
-                                                label: type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Simple label fallback
-                                                status: 'needed'
-                                            });
-                                        }
-                                    });
-                                    onUpdate({ ...lead, documents: newDocs });
-                                }}
-                            />
-                        </div>
-                    )}
-
-                    {activeTab === 'qualification' && (
-                        <div className="qualification-view">
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                                <BDOQualificationChecklist
-                                    lead={lead}
-                                    onUpdate={async (updates) => onUpdate({ ...lead, ...updates })}
-                                />
-                                {/* Placeholder for Future Deal Structurer */}
-                                <DealStructureCalculator
-                                    lead={lead}
-                                    onUpdate={async (updates) => onUpdate({ ...lead, ...updates })}
-                                />
-                            </div>
-
-                            <SBAEligibilityScanner
-                                lead={lead}
-                                onUpdateNote={(note) => {
-                                    const newNote = {
-                                        id: Date.now().toString(),
-                                        content: note,
-                                        timestamp: new Date().toISOString(),
-                                        author: 'System',
-                                        type: 'SystemEvent' as const,
-                                        context: 'System' as const
-                                    };
-                                    onUpdate({ ...lead, notes: [newNote, ...(lead.notes || [])] });
-                                }}
-                            />
-                        </div>
-                    )}
-
-                    {activeTab === 'closing' && (
-                        <div className="closing-view">
-                            <ClosingChecklist
-                                lead={lead}
-                                onUpdateClosingItem={(itemId, updates) => {
-                                    const items = lead.closingItems || [];
-                                    const existingIndex = items.findIndex(i => i.id === itemId);
-                                    let newItems;
-                                    if (existingIndex >= 0) {
-                                        newItems = items.map(i => i.id === itemId ? { ...i, ...updates } : i);
-                                    } else {
-                                        // Initialize with default items if not present
-                                        const DEFAULT_ITEMS = [
-                                            { id: 'closing-0', category: 'pre_closing' as const, label: 'Title Commitment Ordered', status: 'pending' as const },
-                                            { id: 'closing-1', category: 'pre_closing' as const, label: 'Title Commitment Received', status: 'pending' as const },
-                                            { id: 'closing-2', category: 'pre_closing' as const, label: 'Title Cleared', status: 'pending' as const },
-                                            { id: 'closing-3', category: 'pre_closing' as const, label: 'Appraisal Ordered', status: 'pending' as const },
-                                            { id: 'closing-4', category: 'pre_closing' as const, label: 'Appraisal Received', status: 'pending' as const },
-                                            { id: 'closing-5', category: 'pre_closing' as const, label: 'Appraisal Reviewed', status: 'pending' as const },
-                                            { id: 'closing-6', category: 'pre_closing' as const, label: 'Insurance Quote Received', status: 'pending' as const },
-                                            { id: 'closing-7', category: 'pre_closing' as const, label: 'Insurance Binder Ordered', status: 'pending' as const },
-                                            { id: 'closing-8', category: 'pre_closing' as const, label: 'Closing Docs Drafted', status: 'pending' as const },
-                                            { id: 'closing-9', category: 'pre_closing' as const, label: 'Closing Docs to Parties', status: 'pending' as const },
-                                            { id: 'closing-10', category: 'closing_day' as const, label: 'Wire Instructions Received', status: 'pending' as const },
-                                            { id: 'closing-11', category: 'closing_day' as const, label: 'Signing Scheduled', status: 'pending' as const },
-                                            { id: 'closing-12', category: 'closing_day' as const, label: 'Signing Complete', status: 'pending' as const },
-                                            { id: 'closing-13', category: 'closing_day' as const, label: 'Recording Submitted', status: 'pending' as const },
-                                            { id: 'closing-14', category: 'closing_day' as const, label: 'Recording Confirmed', status: 'pending' as const },
-                                            { id: 'closing-15', category: 'closing_day' as const, label: 'Funding Wire Sent', status: 'pending' as const },
-                                            { id: 'closing-16', category: 'closing_day' as const, label: 'Funding Confirmed', status: 'pending' as const },
-                                            { id: 'closing-17', category: 'post_closing' as const, label: 'Recorded Deed Received', status: 'pending' as const },
-                                            { id: 'closing-18', category: 'post_closing' as const, label: 'Final Title Policy', status: 'pending' as const },
-                                            { id: 'closing-19', category: 'post_closing' as const, label: 'Insurance Binder Filed', status: 'pending' as const },
-                                            { id: 'closing-20', category: 'post_closing' as const, label: 'SBA Form 1502 Filed', status: 'pending' as const },
-                                            { id: 'closing-21', category: 'post_closing' as const, label: 'File Audit Complete', status: 'pending' as const },
-                                        ];
-                                        newItems = DEFAULT_ITEMS.map(i => i.id === itemId ? { ...i, ...updates } : i);
-                                    }
-                                    onUpdate({ ...lead, closingItems: newItems });
-                                }}
-                                onUpdateLead={(updates) => {
-                                    onUpdate({ ...lead, ...updates });
-                                }}
-                            />
-                        </div>
-                    )}
-
-                    {activeTab === 'partners' && (
-                        <div className="partners-view">
-                            <BankPartnerPanel
-                                lead={lead}
-                                bankers={(() => {
-                                    // Load bankers from localStorage (shared with BankerRolodex)
-                                    const stored = localStorage.getItem('leads_bankers_v1');
-                                    if (stored) {
-                                        return JSON.parse(stored);
-                                    }
-                                    // Fallback default bankers
-                                    return [
-                                        { id: 'b1', name: 'John Mitchell', bank: 'Comerica', branch: 'Riverside', title: 'VP Commercial Banking', phone: '951-555-0101', email: 'jmitchell@comerica.com', trustScore: 5, totalFunded: 12500000, lastDealDate: '2024-10-15', notes: 'Great partner.' },
-                                        { id: 'b2', name: 'Sarah Chen', bank: 'Pacific Premier', branch: 'Los Angeles', title: 'SVP', phone: '213-555-0202', email: 'schen@ppbi.com', trustScore: 5, totalFunded: 18200000, lastDealDate: '2024-11-01', notes: 'Top performer.' },
-                                        { id: 'b3', name: 'Mike Thompson', bank: 'First Republic', branch: 'Newport Beach', title: 'Director', phone: '949-555-0303', email: 'mthompson@firstrepublic.com', trustScore: 4, totalFunded: 8500000, lastDealDate: '2024-09-20', notes: 'Good for larger deals.' },
-                                        { id: 'b4', name: 'Lisa Wong', bank: 'US Bank', branch: 'San Diego', title: 'VP SBA Lending', phone: '619-555-0404', email: 'lwong@usbank.com', trustScore: 4, totalFunded: 6800000, lastDealDate: '2024-08-10', notes: 'SBA preferred lender.' },
-                                    ];
-                                })()}
-                                onAddBankPartner={(partner) => {
-                                    const partners = lead.bankPartners || [];
-                                    onUpdate({ ...lead, bankPartners: [...partners, partner] });
-                                }}
-                                onUpdateBankPartner={(bankerId, updates) => {
-                                    const partners = lead.bankPartners || [];
-                                    const newPartners = partners.map(p =>
-                                        p.bankerId === bankerId ? { ...p, ...updates } : p
-                                    );
-                                    onUpdate({ ...lead, bankPartners: newPartners });
-                                }}
-                                onRemoveBankPartner={(bankerId) => {
-                                    const partners = lead.bankPartners || [];
-                                    onUpdate({ ...lead, bankPartners: partners.filter(p => p.bankerId !== bankerId) });
-                                }}
-                            />
-                        </div>
-                    )}
-
-                    {activeTab === 'activity' && (
-                        <div className="activity-view">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3>Email Activity (Sync: Outlook)</h3>
-                                <button className="btn-secondary text-sm" onClick={loadEmails}>🔄 Refresh</button>
-                            </div>
-
-                            {loadingEmails ? (
-                                <div className="p-8 text-center text-muted">Thinking (Graph API)...</div>
-                            ) : (
-                                <div className="activity-list flex flex-col gap-4">
-                                    {emails.length === 0 ? (
-                                        <div className="p-8 text-center text-muted border rounded-lg border-dashed">
-                                            No recent emails found in M365.
+                                        <div className="edit-actions">
+                                            <button className="btn-text" onClick={() => setIsEditingSnapshot(false)}>Cancel</button>
+                                            <button className="btn-primary" onClick={handleSaveSnapshot}>Save Changes</button>
                                         </div>
                                     ) : (
-                                        emails.map(email => (
-                                            <div key={email.id} className="email-card border rounded-lg p-4 bg-white hover:shadow-sm transition-shadow">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <div>
-                                                        <span className="font-semibold text-slate-800">{email.subject}</span>
-                                                        <div className="text-xs text-muted mt-1">
-                                                            {email.from === lead.email ? '↙️ Received' : '↗️ Sent'} • {new Date(email.date).toLocaleString()}
-                                                        </div>
-                                                    </div>
-                                                    {email.hasAttachments && <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">📎 Attachment</span>}
-                                                </div>
-                                                <p className="text-sm text-slate-600 line-clamp-2">{email.preview}</p>
-                                                <div className="mt-3 flex gap-2">
-                                                    <button className="btn-text text-xs">Reply</button>
-                                                    <button className="btn-text text-xs">View Thread</button>
-                                                </div>
+                                        <button className="btn-text" onClick={() => setIsEditingSnapshot(true)}>✏️ Edit Details</button>
+                                    )}
+                                </div>
+
+                                <div className="info-grid">
+                                    <div className="info-item">
+                                        <label>First Name</label>
+                                        {isEditingSnapshot ? (
+                                            <input
+                                                value={snapshotData.firstName}
+                                                onChange={e => setSnapshotData({ ...snapshotData, firstName: e.target.value })}
+                                                className="edit-input"
+                                            />
+                                        ) : (
+                                            <p>{lead.firstName}</p>
+                                        )}
+                                    </div>
+                                    <div className="info-item">
+                                        <label>Last Name</label>
+                                        {isEditingSnapshot ? (
+                                            <input
+                                                value={snapshotData.lastName}
+                                                onChange={e => setSnapshotData({ ...snapshotData, lastName: e.target.value })}
+                                                className="edit-input"
+                                            />
+                                        ) : (
+                                            <p>{lead.lastName}</p>
+                                        )}
+                                    </div>
+                                    <div className="info-item">
+                                        <label>Email</label>
+                                        {isEditingSnapshot ? (
+                                            <input
+                                                value={snapshotData.email}
+                                                onChange={e => setSnapshotData({ ...snapshotData, email: e.target.value })}
+                                                className="edit-input"
+                                            />
+                                        ) : (
+                                            <p><a href={`mailto:${lead.email}`}>{lead.email}</a></p>
+                                        )}
+                                    </div>
+                                    <div className="info-item">
+                                        <label>Phone</label>
+                                        {isEditingSnapshot ? (
+                                            <input
+                                                value={snapshotData.phone || ''}
+                                                onChange={e => setSnapshotData({ ...snapshotData, phone: e.target.value })}
+                                                className="edit-input"
+                                            />
+                                        ) : (
+                                            <p>{lead.phone || '--'}</p>
+                                        )}
+                                    </div>
+                                    <div className="info-item">
+                                        <label>Program</label>
+                                        {isEditingSnapshot ? (
+                                            <select
+                                                value={snapshotData.loanProgram || 'SBA 504'}
+                                                onChange={e => setSnapshotData({ ...snapshotData, loanProgram: e.target.value as any })}
+                                                className="edit-input"
+                                            >
+                                                <option value="SBA 504">SBA 504</option>
+                                                <option value="SBA 7a">SBA 7a</option>
+                                                <option value="Conventional">Conventional</option>
+                                            </select>
+                                        ) : (
+                                            <p>{lead.loanProgram || 'SBA 504'}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="ai-section">
+                                    <h3>AI Email Drafter</h3>
+                                    <p className="hint">Generate a personalized intro email based on this lead's profile.</p>
+                                    {aiEmail ? (
+                                        <div className="email-preview">
+                                            <textarea
+                                                className="email-editor"
+                                                value={aiEmail}
+                                                onChange={(e) => setAiEmail(e.target.value)}
+                                            />
+                                            <div className="email-actions">
+                                                <button className="btn-secondary" onClick={() => window.open(`mailto:${lead.email}?subject=Intro&body=${encodeURIComponent(aiEmail)}`)}>Open in Outlook</button>
+                                                <button className="btn-text" onClick={() => setAiEmail('')}>Discard</button>
                                             </div>
-                                        ))
+                                        </div>
+                                    ) : (
+                                        <button className="btn-primary" onClick={handleGenerateEmail} disabled={loadingAi}>
+                                            {loadingAi ? 'Drafting...' : '✨ Draft Intro Email'}
+                                        </button>
                                     )}
                                 </div>
-                            )}
+                            </div>
+                        )}
 
-                            {/* Alert for Simulation */}
-                            <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3 items-start">
-                                <span className="text-xl">ℹ️</span>
-                                <div>
-                                    <h5 className="font-semibold text-amber-800 text-sm m-0">Integration Mode</h5>
-                                    <p className="text-amber-700 text-xs mt-1 m-0">
-                                        This view is currently simulating the Microsoft Graph API connection. In production, this would use OAuth2 to fetch real emails from <code>{lead.email}</code>.
-                                    </p>
+                        {activeTab === 'contacts' && (
+                            <div className="contacts-view">
+                                <div className="contacts-list">
+                                    {contacts.map(contact => (
+                                        <div key={contact.id} className={`contact-card ${contact.isPrimary ? 'primary' : ''}`}>
+                                            <div className="contact-info">
+                                                <h4>
+                                                    {contact.name}
+                                                    {contact.isPrimary && <span className="primary-badge">Primary</span>}
+                                                </h4>
+                                                <p className="role">{contact.role}</p>
+                                                <p className="contact-details">
+                                                    {contact.email && <span>📧 {contact.email}</span>}
+                                                    {contact.phone && <span>📱 {contact.phone}</span>}
+                                                </p>
+                                            </div>
+                                            <div className="contact-actions">
+                                                {!contact.isPrimary && (
+                                                    <button className="btn-text" onClick={() => handleSetPrimary(contact.id)}>Set Primary</button>
+                                                )}
+                                                <button className="btn-icon" onClick={() => openEditContact(contact)}>✏️</button>
+                                                <button className="btn-icon delete" onClick={() => handleDeleteContact(contact.id)}>🗑️</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {contacts.length === 0 && <p className="empty-text">No additional contacts added.</p>}
+                                </div>
+
+                                {showAddContact ? (
+                                    <div className="add-contact-form">
+                                        <h4>{editingContact ? 'Edit Contact' : 'Add New Contact'}</h4>
+                                        <div className="form-row">
+                                            <input
+                                                placeholder="Name"
+                                                value={newContact.name || ''}
+                                                onChange={e => setNewContact({ ...newContact, name: e.target.value })}
+                                            />
+                                            <input
+                                                placeholder="Role (e.g. CFO)"
+                                                value={newContact.role || ''}
+                                                onChange={e => setNewContact({ ...newContact, role: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="form-row">
+                                            <input
+                                                placeholder="Email"
+                                                value={newContact.email || ''}
+                                                onChange={e => setNewContact({ ...newContact, email: e.target.value })}
+                                            />
+                                            <input
+                                                placeholder="Phone"
+                                                value={newContact.phone || ''}
+                                                onChange={e => setNewContact({ ...newContact, phone: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="form-actions">
+                                            <button className="btn-primary" onClick={handleSaveContact}>Save Contact</button>
+                                            <button className="btn-secondary" onClick={() => {
+                                                setShowAddContact(false);
+                                                setEditingContact(null);
+                                                setNewContact({});
+                                            }}>Cancel</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button className="btn-dashed" onClick={() => setShowAddContact(true)}>+ Add Contact</button>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'documents' && (
+                            <div className="documents-view">
+                                <DocumentChecklist
+                                    lead={lead}
+                                    onUpdateDocument={(docId, updates) => {
+                                        const docs = lead.documents || [];
+                                        const existingIdx = docs.findIndex(d => d.id === docId);
+                                        let newDocs;
+                                        if (existingIdx >= 0) {
+                                            newDocs = [...docs];
+                                            newDocs[existingIdx] = { ...newDocs[existingIdx], ...updates };
+                                        } else {
+                                            // Add new doc
+                                            newDocs = [...docs, { id: docId, ...updates } as Document];
+                                        }
+                                        onUpdate({ ...lead, documents: newDocs });
+                                    }}
+                                    onRequestDocs={(_docTypes) => {
+                                        const sendNowUrl = 'https://sendnow.gatewayportal.com/ampac/Send_Now_Documents/r1';
+                                        window.open(sendNowUrl, '_blank');
+                                    }}
+                                    onApplyTemplate={(template) => {
+                                        // Merge template with existing docs
+                                        const currentDocs = lead.documents || [];
+                                        const newDocs = [...currentDocs];
+
+                                        template.forEach(type => {
+                                            if (!newDocs.find(d => d.type === type)) {
+                                                newDocs.push({
+                                                    id: `doc-${type}-${Date.now()}`,
+                                                    type,
+                                                    label: type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Simple label fallback
+                                                    status: 'needed'
+                                                });
+                                            }
+                                        });
+                                        onUpdate({ ...lead, documents: newDocs });
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {activeTab === 'qualification' && (
+                            <div className="qualification-view">
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                                    <BDOQualificationChecklist
+                                        lead={lead}
+                                        onUpdate={async (updates) => onUpdate({ ...lead, ...updates })}
+                                    />
+                                    {/* Placeholder for Future Deal Structurer */}
+                                    <DealStructureCalculator
+                                        lead={lead}
+                                        onUpdate={async (updates) => onUpdate({ ...lead, ...updates })}
+                                    />
+                                </div>
+
+                                <SBAEligibilityScanner
+                                    lead={lead}
+                                    onUpdateNote={(note) => {
+                                        const newNote = {
+                                            id: Date.now().toString(),
+                                            content: note,
+                                            timestamp: new Date().toISOString(),
+                                            author: 'System',
+                                            type: 'SystemEvent' as const,
+                                            context: 'System' as const
+                                        };
+                                        onUpdate({ ...lead, notes: [newNote, ...(lead.notes || [])] });
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {activeTab === 'closing' && (
+                            <div className="closing-view">
+                                <ClosingChecklist
+                                    lead={lead}
+                                    onUpdateClosingItem={(itemId, updates) => {
+                                        const items = lead.closingItems || [];
+                                        const existingIndex = items.findIndex(i => i.id === itemId);
+                                        let newItems;
+                                        if (existingIndex >= 0) {
+                                            newItems = items.map(i => i.id === itemId ? { ...i, ...updates } : i);
+                                        } else {
+                                            // Initialize with default items if not present
+                                            const DEFAULT_ITEMS = [
+                                                { id: 'closing-0', category: 'pre_closing' as const, label: 'Title Commitment Ordered', status: 'pending' as const },
+                                                { id: 'closing-1', category: 'pre_closing' as const, label: 'Title Commitment Received', status: 'pending' as const },
+                                                { id: 'closing-2', category: 'pre_closing' as const, label: 'Title Cleared', status: 'pending' as const },
+                                                { id: 'closing-3', category: 'pre_closing' as const, label: 'Appraisal Ordered', status: 'pending' as const },
+                                                { id: 'closing-4', category: 'pre_closing' as const, label: 'Appraisal Received', status: 'pending' as const },
+                                                { id: 'closing-5', category: 'pre_closing' as const, label: 'Appraisal Reviewed', status: 'pending' as const },
+                                                { id: 'closing-6', category: 'pre_closing' as const, label: 'Insurance Quote Received', status: 'pending' as const },
+                                                { id: 'closing-7', category: 'pre_closing' as const, label: 'Insurance Binder Ordered', status: 'pending' as const },
+                                                { id: 'closing-8', category: 'pre_closing' as const, label: 'Closing Docs Drafted', status: 'pending' as const },
+                                                { id: 'closing-9', category: 'pre_closing' as const, label: 'Closing Docs to Parties', status: 'pending' as const },
+                                                { id: 'closing-10', category: 'closing_day' as const, label: 'Wire Instructions Received', status: 'pending' as const },
+                                                { id: 'closing-11', category: 'closing_day' as const, label: 'Signing Scheduled', status: 'pending' as const },
+                                                { id: 'closing-12', category: 'closing_day' as const, label: 'Signing Complete', status: 'pending' as const },
+                                                { id: 'closing-13', category: 'closing_day' as const, label: 'Recording Submitted', status: 'pending' as const },
+                                                { id: 'closing-14', category: 'closing_day' as const, label: 'Recording Confirmed', status: 'pending' as const },
+                                                { id: 'closing-15', category: 'closing_day' as const, label: 'Funding Wire Sent', status: 'pending' as const },
+                                                { id: 'closing-16', category: 'closing_day' as const, label: 'Funding Confirmed', status: 'pending' as const },
+                                                { id: 'closing-17', category: 'post_closing' as const, label: 'Recorded Deed Received', status: 'pending' as const },
+                                                { id: 'closing-18', category: 'post_closing' as const, label: 'Final Title Policy', status: 'pending' as const },
+                                                { id: 'closing-19', category: 'post_closing' as const, label: 'Insurance Binder Filed', status: 'pending' as const },
+                                                { id: 'closing-20', category: 'post_closing' as const, label: 'SBA Form 1502 Filed', status: 'pending' as const },
+                                                { id: 'closing-21', category: 'post_closing' as const, label: 'File Audit Complete', status: 'pending' as const },
+                                            ];
+                                            newItems = DEFAULT_ITEMS.map(i => i.id === itemId ? { ...i, ...updates } : i);
+                                        }
+                                        onUpdate({ ...lead, closingItems: newItems });
+                                    }}
+                                    onUpdateLead={(updates) => {
+                                        onUpdate({ ...lead, ...updates });
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {activeTab === 'partners' && (
+                            <div className="partners-view">
+                                <BankPartnerPanel
+                                    lead={lead}
+                                    bankers={(() => {
+                                        // Load bankers from localStorage (shared with BankerRolodex)
+                                        const stored = localStorage.getItem('leads_bankers_v1');
+                                        if (stored) {
+                                            return JSON.parse(stored);
+                                        }
+                                        // Fallback default bankers
+                                        return [
+                                            { id: 'b1', name: 'John Mitchell', bank: 'Comerica', branch: 'Riverside', title: 'VP Commercial Banking', phone: '951-555-0101', email: 'jmitchell@comerica.com', trustScore: 5, totalFunded: 12500000, lastDealDate: '2024-10-15', notes: 'Great partner.' },
+                                            { id: 'b2', name: 'Sarah Chen', bank: 'Pacific Premier', branch: 'Los Angeles', title: 'SVP', phone: '213-555-0202', email: 'schen@ppbi.com', trustScore: 5, totalFunded: 18200000, lastDealDate: '2024-11-01', notes: 'Top performer.' },
+                                            { id: 'b3', name: 'Mike Thompson', bank: 'First Republic', branch: 'Newport Beach', title: 'Director', phone: '949-555-0303', email: 'mthompson@firstrepublic.com', trustScore: 4, totalFunded: 8500000, lastDealDate: '2024-09-20', notes: 'Good for larger deals.' },
+                                            { id: 'b4', name: 'Lisa Wong', bank: 'US Bank', branch: 'San Diego', title: 'VP SBA Lending', phone: '619-555-0404', email: 'lwong@usbank.com', trustScore: 4, totalFunded: 6800000, lastDealDate: '2024-08-10', notes: 'SBA preferred lender.' },
+                                        ];
+                                    })()}
+                                    onAddBankPartner={(partner) => {
+                                        const partners = lead.bankPartners || [];
+                                        onUpdate({ ...lead, bankPartners: [...partners, partner] });
+                                    }}
+                                    onUpdateBankPartner={(bankerId, updates) => {
+                                        const partners = lead.bankPartners || [];
+                                        const newPartners = partners.map(p =>
+                                            p.bankerId === bankerId ? { ...p, ...updates } : p
+                                        );
+                                        onUpdate({ ...lead, bankPartners: newPartners });
+                                    }}
+                                    onRemoveBankPartner={(bankerId) => {
+                                        const partners = lead.bankPartners || [];
+                                        onUpdate({ ...lead, bankPartners: partners.filter(p => p.bankerId !== bankerId) });
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {activeTab === 'activity' && (
+                            <div className="activity-view">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3>Email Activity (Sync: Outlook)</h3>
+                                    <button className="btn-secondary text-sm" onClick={loadEmails}>🔄 Refresh</button>
+                                </div>
+
+                                {loadingEmails ? (
+                                    <div className="p-8 text-center text-muted">Thinking (Graph API)...</div>
+                                ) : (
+                                    <div className="activity-list flex flex-col gap-4">
+                                        {emails.length === 0 ? (
+                                            <div className="p-8 text-center text-muted border rounded-lg border-dashed">
+                                                No recent emails found in M365.
+                                            </div>
+                                        ) : (
+                                            emails.map(email => (
+                                                <div key={email.id} className="email-card border rounded-lg p-4 bg-white hover:shadow-sm transition-shadow">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div>
+                                                            <span className="font-semibold text-slate-800">{email.subject}</span>
+                                                            <div className="text-xs text-muted mt-1">
+                                                                {email.from === lead.email ? '↙️ Received' : '↗️ Sent'} • {new Date(email.date).toLocaleString()}
+                                                            </div>
+                                                        </div>
+                                                        {email.hasAttachments && <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">📎 Attachment</span>}
+                                                    </div>
+                                                    <p className="text-sm text-slate-600 line-clamp-2">{email.preview}</p>
+                                                    <div className="mt-3 flex gap-2">
+                                                        <button className="btn-text text-xs">Reply</button>
+                                                        <button className="btn-text text-xs">View Thread</button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Alert for Simulation */}
+                                <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3 items-start">
+                                    <span className="text-xl">ℹ️</span>
+                                    <div>
+                                        <h5 className="font-semibold text-amber-800 text-sm m-0">Integration Mode</h5>
+                                        <p className="text-amber-700 text-xs mt-1 m-0">
+                                            This view is currently simulating the Microsoft Graph API connection. In production, this would use OAuth2 to fetch real emails from <code>{lead.email}</code>.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {activeTab === 'research' && (
-                        <div className="research-view">
-                            <div className="ai-card">
-                                <h3>Deal Analysis & Scoring</h3>
-                                {aiAnalysis ? (
-                                    <div className="score-card-container">
-                                        {(() => {
-                                            try {
-                                                const result = JSON.parse(aiAnalysis);
-                                                // If it's the old string format, throw to catch block
-                                                if (typeof result !== 'object') throw new Error();
+                        {activeTab === 'research' && (
+                            <div className="research-view">
+                                <div className="ai-card">
+                                    <h3>Deal Analysis & Scoring</h3>
+                                    {aiAnalysis ? (
+                                        <div className="score-card-container">
+                                            {(() => {
+                                                try {
+                                                    const result = JSON.parse(aiAnalysis);
+                                                    // If it's the old string format, throw to catch block
+                                                    if (typeof result !== 'object') throw new Error();
 
-                                                const getColor = (g: string) => {
-                                                    if (g === 'A') return '#22c55e';
-                                                    if (g === 'B') return '#eab308';
-                                                    return '#ef4444';
-                                                };
+                                                    const getColor = (g: string) => {
+                                                        if (g === 'A') return '#22c55e';
+                                                        if (g === 'B') return '#eab308';
+                                                        return '#ef4444';
+                                                    };
 
-                                                return (
-                                                    <div className="score-dashboard">
-                                                        <div className="score-header">
-                                                            <div className="score-gauge" style={{ borderColor: getColor(result.grade) }}>
-                                                                <span className="score-value">{result.score}</span>
-                                                                <span className="score-grade" style={{ color: getColor(result.grade) }}>{result.grade}</span>
-                                                            </div>
-                                                            <div className="score-summary">
-                                                                <h4>{result.recommendation}</h4>
-                                                                <div className="score-bars">
-                                                                    <div className="bar-row">
-                                                                        <label>Industry</label>
-                                                                        <div className="bar-bg"><div className="bar-fill" style={{ width: `${(result.breakdown.industry / 40) * 100}%`, background: '#3b82f6' }}></div></div>
-                                                                    </div>
-                                                                    <div className="bar-row">
-                                                                        <label>Digital</label>
-                                                                        <div className="bar-bg"><div className="bar-fill" style={{ width: `${(result.breakdown.digital / 30) * 100}%`, background: '#8b5cf6' }}></div></div>
-                                                                    </div>
-                                                                    <div className="bar-row">
-                                                                        <label>Data</label>
-                                                                        <div className="bar-bg"><div className="bar-fill" style={{ width: `${(result.breakdown.data / 30) * 100}%`, background: '#ec4899' }}></div></div>
+                                                    return (
+                                                        <div className="score-dashboard">
+                                                            <div className="score-header">
+                                                                <div className="score-gauge" style={{ borderColor: getColor(result.grade) }}>
+                                                                    <span className="score-value">{result.score}</span>
+                                                                    <span className="score-grade" style={{ color: getColor(result.grade) }}>{result.grade}</span>
+                                                                </div>
+                                                                <div className="score-summary">
+                                                                    <h4>{result.recommendation}</h4>
+                                                                    <div className="score-bars">
+                                                                        <div className="bar-row">
+                                                                            <label>Industry</label>
+                                                                            <div className="bar-bg"><div className="bar-fill" style={{ width: `${(result.breakdown.industry / 40) * 100}%`, background: '#3b82f6' }}></div></div>
+                                                                        </div>
+                                                                        <div className="bar-row">
+                                                                            <label>Digital</label>
+                                                                            <div className="bar-bg"><div className="bar-fill" style={{ width: `${(result.breakdown.digital / 30) * 100}%`, background: '#8b5cf6' }}></div></div>
+                                                                        </div>
+                                                                        <div className="bar-row">
+                                                                            <label>Data</label>
+                                                                            <div className="bar-bg"><div className="bar-fill" style={{ width: `${(result.breakdown.data / 30) * 100}%`, background: '#ec4899' }}></div></div>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
 
-                                                        <div className="score-factors">
-                                                            <div className="factor-col">
-                                                                <h5>✅ Strengths</h5>
-                                                                <ul>
-                                                                    {result.factors.positive.map((f: string, i: number) => <li key={i}>{f}</li>)}
-                                                                </ul>
-                                                            </div>
-                                                            <div className="factor-col">
-                                                                <h5>❌ Gaps</h5>
-                                                                <ul>
-                                                                    {result.factors.negative.map((f: string, i: number) => <li key={i}>{f}</li>)}
-                                                                </ul>
+                                                            <div className="score-factors">
+                                                                <div className="factor-col">
+                                                                    <h5>✅ Strengths</h5>
+                                                                    <ul>
+                                                                        {result.factors.positive.map((f: string, i: number) => <li key={i}>{f}</li>)}
+                                                                    </ul>
+                                                                </div>
+                                                                <div className="factor-col">
+                                                                    <h5>❌ Gaps</h5>
+                                                                    <ul>
+                                                                        {result.factors.negative.map((f: string, i: number) => <li key={i}>{f}</li>)}
+                                                                    </ul>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            } catch (e) {
-                                                // Fallback for old text format
-                                                return <div className="analysis-content">{aiAnalysis}</div>;
-                                            }
-                                        })()}
-                                    </div>
-                                ) : (
-                                    <div className="empty-analysis">
-                                        <p>Run AI analysis to check eligibility and deal strength.</p>
-                                        <button className="btn-primary" onClick={handleAnalyzeDeal} disabled={loadingAi}>
-                                            {loadingAi ? 'Analyzing...' : '⚡ Analyze Deal'}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'notes' && (
-                        <div className="notes-view">
-                            {/* Add Note Section */}
-                            <div className="add-note enhanced">
-                                <div className="note-input-row">
-                                    <select
-                                        value={noteContext}
-                                        onChange={e => setNoteContext(e.target.value as any)}
-                                        className="context-select"
-                                    >
-                                        <option value="Call">Call</option>
-                                        <option value="Email">Email</option>
-                                        <option value="Meeting">Meeting</option>
-                                        <option value="Manual">Note</option>
-                                    </select>
-                                    <textarea
-                                        placeholder="Add note..."
-                                        value={noteContent}
-                                        onChange={e => setNoteContent(e.target.value)}
-                                    />
+                                                    );
+                                                } catch (e) {
+                                                    // Fallback for old text format
+                                                    return <div className="analysis-content">{aiAnalysis}</div>;
+                                                }
+                                            })()}
+                                        </div>
+                                    ) : (
+                                        <div className="empty-analysis">
+                                            <p>Run AI analysis to check eligibility and deal strength.</p>
+                                            <button className="btn-primary" onClick={handleAnalyzeDeal} disabled={loadingAi}>
+                                                {loadingAi ? 'Analyzing...' : '⚡ Analyze Deal'}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                                <button className="btn-primary" onClick={handleSaveNote} disabled={!noteContent.trim()}>
-                                    Add
-                                </button>
                             </div>
+                        )}
 
-                            {/* Notes List - Structured */}
-                            <div className="notes-list structured">
-                                {(!lead.notes || lead.notes.length === 0) ? (
-                                    <div className="no-notes">
-                                        <p>No notes yet</p>
+                        {activeTab === 'notes' && (
+                            <div className="notes-view">
+                                {/* Add Note Section */}
+                                <div className="add-note enhanced">
+                                    <div className="note-input-row">
+                                        <select
+                                            value={noteContext}
+                                            onChange={e => setNoteContext(e.target.value as any)}
+                                            className="context-select"
+                                        >
+                                            <option value="Call">Call</option>
+                                            <option value="Email">Email</option>
+                                            <option value="Meeting">Meeting</option>
+                                            <option value="Manual">Note</option>
+                                        </select>
+                                        <textarea
+                                            placeholder="Add note..."
+                                            value={noteContent}
+                                            onChange={e => setNoteContent(e.target.value)}
+                                        />
                                     </div>
-                                ) : (
-                                    lead.notes.map(note => {
-                                        const contextLabel = note.context || (note.type === 'SystemEvent' ? 'System' : 'Note');
-                                        const contextClass = note.context?.toLowerCase() || (note.type === 'SystemEvent' ? 'system' : 'note');
+                                    <button className="btn-primary" onClick={handleSaveNote} disabled={!noteContent.trim()}>
+                                        Add
+                                    </button>
+                                </div>
 
-                                        return (
-                                            <div key={note.id} className={`note-item structured ${note.type} ctx-${contextClass}`}>
-                                                <div className="note-context-indicator" />
-                                                <div className="note-body">
-                                                    <div className="note-header">
-                                                        <span className="context-label">{contextLabel}</span>
-                                                        <span className="separator">·</span>
-                                                        <span className="author">{note.author}</span>
-                                                        <span className="separator">·</span>
-                                                        <span className="time">{new Date(note.timestamp).toLocaleDateString()} {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                {/* Notes List - Structured */}
+                                <div className="notes-list structured">
+                                    {(!lead.notes || lead.notes.length === 0) ? (
+                                        <div className="no-notes">
+                                            <p>No notes yet</p>
+                                        </div>
+                                    ) : (
+                                        lead.notes.map(note => {
+                                            const contextLabel = note.context || (note.type === 'SystemEvent' ? 'System' : 'Note');
+                                            const contextClass = note.context?.toLowerCase() || (note.type === 'SystemEvent' ? 'system' : 'note');
+
+                                            return (
+                                                <div key={note.id} className={`note-item structured ${note.type} ctx-${contextClass}`}>
+                                                    <div className="note-context-indicator" />
+                                                    <div className="note-body">
+                                                        <div className="note-header">
+                                                            <span className="context-label">{contextLabel}</span>
+                                                            <span className="separator">·</span>
+                                                            <span className="author">{note.author}</span>
+                                                            <span className="separator">·</span>
+                                                            <span className="time">{new Date(note.timestamp).toLocaleDateString()} {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        </div>
+                                                        <p className="note-content">{note.content}</p>
                                                     </div>
-                                                    <p className="note-content">{note.content}</p>
                                                 </div>
-                                            </div>
-                                        );
-                                    })
-                                )}
+                                            );
+                                        })
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
+                    </div>
+
+                    {showTransfer && (
+                        <TransferLeadModal
+                            lead={lead}
+                            onClose={() => setShowTransfer(false)}
+                            onTransfer={handleTransfer}
+                        />
                     )}
-                </div>
 
-                {showTransfer && (
-                    <TransferLeadModal
-                        lead={lead}
-                        onClose={() => setShowTransfer(false)}
-                        onTransfer={handleTransfer}
-                    />
-                )}
-
-                <style>{`
+                    <style>{`
                 .modal-overlay {
                     position: fixed;
                     top: 0; left: 0; right: 0; bottom: 0;
@@ -1300,8 +1306,19 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpda
                     white-space: pre-wrap;
                 }
             `}</style>
+                </div>
             </div>
-        </div>
+
+            {/* SBA 504 Loan Detail Modal */}
+            <LoanDetailModal
+                isOpen={showLoanDetail}
+                lead={lead}
+                onClose={() => setShowLoanDetail(false)}
+                onSave={async (updatedLead) => {
+                    onUpdate(updatedLead);
+                }}
+            />
+        </>
     );
 };
 
