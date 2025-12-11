@@ -1,7 +1,7 @@
 {
   "name": "api",
   "version": "1.0.0",
-  "description": "AmPac Leads API",
+  "description": "AMPAC CRM API",
   "main": "dist/server.js",
   "engines": {
     "node": ">=18.0.0"

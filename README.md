@@ -1,6 +1,6 @@
-# Lead Sheets
+# AMPAC CRM
 
-Lead Sheets is a follow-up engine for AmPac BDOs, integrating Excel, Outlook, and Teams.
+AMPAC CRM is a follow-up engine for AmPac BDOs, integrating Excel, Outlook, and Teams.
 
 ## Structure
 

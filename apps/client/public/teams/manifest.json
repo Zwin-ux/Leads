@@ -15,12 +15,12 @@
         "outline": "outline.png"
     },
     "name": {
-        "short": "Lead Sheets",
-        "full": "Lead Sheets for AmPac"
+        "short": "AMPAC CRM",
+        "full": "AMPAC CRM for AmPac"
     },
     "description": {
-        "short": "Follow-up engine for AmPac BDOs.",
-        "full": "Lead Sheets binds Excel, Outlook, and Teams together for efficient lead management."
+        "short": "CRM engine for AmPac BDOs.",
+        "full": "AMPAC CRM binds Excel, Outlook, and Teams together for efficient lead management."
     },
     "accentColor": "#FFFFFF",
     "staticTabs": [

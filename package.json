@@ -1,5 +1,5 @@
 {
-  "name": "lead-sheets-monorepo",
+  "name": "ampac-crm",
   "private": true,
   "workspaces": [
     "apps/*",

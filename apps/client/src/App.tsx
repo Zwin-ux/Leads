@@ -53,9 +53,10 @@ function App() {
       } else {
         setLoginError("Login was cancelled or failed.");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
-      setLoginError(error.message || "An error occurred during login.");
+      const errorMessage = error instanceof Error ? error.message : "An error occurred during login.";
+      setLoginError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +94,7 @@ function App() {
         <div className="login-container">
           <div className="login-header">
             <img src={logo} alt="AmPac Business Capital" style={{ height: '60px', marginBottom: '1rem' }} />
-            <p className="login-subtitle">Loan Origination Console</p>
+            <p className="login-subtitle">AMPAC CRM</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '2rem' }}>
