@@ -2,11 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { excelService } from '../services/excelService';
 import type { ColumnMapping } from '../services/excelService';
 import { apiService } from '../services/apiService';
+import type { Lead } from '@leads/shared';
 
 const LeadDetail: React.FC = () => {
-    const [lead, setLead] = useState<any>(null);
+    const [lead, setLead] = useState<Partial<Lead> | null>(null);
     const [mapping, setMapping] = useState<ColumnMapping | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const handleSelectionChange = React.useCallback(async () => {
+        if (mapping) {
+            try {
+                const rowData = await excelService.getSelectedRow(mapping);
+                setLead(rowData);
+            } catch (e: unknown) {
+                console.error(e);
+            }
+        }
+    }, [mapping]);
 
     useEffect(() => {
         // Register event handler for selection change
@@ -18,18 +30,7 @@ const LeadDetail: React.FC = () => {
                 Office.context.document.removeHandlerAsync(Office.EventType.DocumentSelectionChanged, handleSelectionChange);
             }
         };
-    }, [mapping]);
-
-    const handleSelectionChange = async () => {
-        if (mapping) {
-            try {
-                const rowData = await excelService.getSelectedRow(mapping);
-                setLead(rowData);
-            } catch (e) {
-                console.error(e);
-            }
-        }
-    };
+    }, [mapping, handleSelectionChange]);
 
     const handleMapColumns = async () => {
         try {
@@ -39,7 +40,7 @@ const LeadDetail: React.FC = () => {
             // Also fetch current selection immediately
             const rowData = await excelService.getSelectedRow(guessed);
             setLead(rowData);
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error(e);
             setError("Failed to map columns. Ensure you are in Excel.");
             // Fallback for dev/testing outside Excel
@@ -59,7 +60,7 @@ const LeadDetail: React.FC = () => {
         try {
             // If lead doesn't have an ID, generate one or let backend handle it.
             // For now, we'll assume new lead from Excel needs a new ID.
-            const leadToSave = { ...lead, id: lead.id || Date.now().toString() };
+            const leadToSave = { ...lead, id: lead.id || Date.now().toString() } as Lead;
             await apiService.createLead(leadToSave);
             alert("Lead saved to CRM!");
         } catch (e) {

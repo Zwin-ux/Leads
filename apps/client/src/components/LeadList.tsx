@@ -110,7 +110,7 @@ const LeadList: React.FC = () => {
         const lead = leads.find(l => l.id === leadId);
         if (!lead) return;
 
-        let updatedLead = { ...lead };
+        const updatedLead = { ...lead };
 
         if (type === 'transfer') {
             updatedLead.owner = newOwner;
@@ -174,8 +174,8 @@ const LeadList: React.FC = () => {
         const now = new Date();
         return {
             total: filteredLeads.length,
-            newLeads: filteredLeads.filter(l => (l as any).stage === 'New').length,
-            inProgress: filteredLeads.filter(l => (l as any).stage === 'In Process' || (l as any).stage === 'Qualified' || (l as any).stage === 'Proposal' || (l as any).stage === 'Negotiation').length,
+            newLeads: filteredLeads.filter(l => l.stage === 'New').length,
+            inProgress: filteredLeads.filter(l => ['In Process', 'Qualified', 'Proposal', 'Negotiation'].includes(l.stage)).length,
             closing: filteredLeads.filter(l => l.dealStage === 'Closing' || l.dealStage === 'Approved').length,
             funded: filteredLeads.filter(l => l.dealStage === 'Funded').length,
             stale: filteredLeads.filter(l => {

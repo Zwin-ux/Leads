@@ -1,19 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { accountingService, type WireTransaction } from '../../services/accountingService';
 
 export const WireLog: React.FC = () => {
-    const [wires, setWires] = useState<WireTransaction[]>([]);
-    const [newWire, setNewWire] = useState({
+    const [wires, setWires] = useState<WireTransaction[]>(() => accountingService.getWires());
+    const [newWire, setNewWire] = useState<{
+        date: string;
+        amount: number;
+        type: 'inbound' | 'outbound';
+        description: string;
+        referenceNumber: string;
+    }>({
         date: new Date().toISOString().split('T')[0],
         amount: 0,
-        type: 'inbound' as const,
+        type: 'inbound',
         description: '',
         referenceNumber: '',
     });
 
-    useEffect(() => {
-        setWires(accountingService.getWires());
-    }, []);
+
 
     const handleAdd = () => {
         if (!newWire.description || !newWire.amount) return;
@@ -42,7 +46,7 @@ export const WireLog: React.FC = () => {
 
             <div className="add-wire-form" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr) auto', gap: '0.5rem', marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '6px' }}>
                 <input type="date" value={newWire.date} onChange={e => setNewWire({ ...newWire, date: e.target.value })} style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                <select value={newWire.type} onChange={e => setNewWire({ ...newWire, type: e.target.value as any })} style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                <select value={newWire.type} onChange={e => setNewWire({ ...newWire, type: e.target.value as 'inbound' | 'outbound' })} style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
                     <option value="inbound">Inbound (Credit)</option>
                     <option value="outbound">Outbound (Debit)</option>
                 </select>

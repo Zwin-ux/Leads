@@ -7,34 +7,35 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // url      = env("DATABASE_URL")
+  // Note: Prisma is currently unused in favor of native Cosmos SDK.
 }
 
 model Lead {
-  id            String   @id @default(uuid())
-  company       String?
-  firstName     String?
-  lastName      String?
-  email         String?
-  phone         String?
-  
+  id        String  @id @default(uuid())
+  company   String?
+  firstName String?
+  lastName  String?
+  email     String?
+  phone     String?
+
   // Address Fields
-  address       String?
-  city          String?
-  state         String?
-  zip           String?
-  
+  address String?
+  city    String?
+  state   String?
+  zip     String?
+
   // Business Metadata
-  source        String?
-  status        String   @default("new")
-  
+  source String?
+  status String  @default("new")
+
   // Flexible Data (Financials, AI Analysis, Stips)
   // We use JSONB to match the previous NoSQL structure purely for speed of migration.
   // In the future, we can normalize these into separate tables.
-  financials    Json?
-  aiAnalysis    Json?
-  stips         Json?
-  
+  financials Json?
+  aiAnalysis Json?
+  stips      Json?
+
   // Processing Workflow
   processorId        String?
   processingPriority String?
@@ -42,13 +43,13 @@ model Lead {
   closingItems       Json?
 
   // BDO / Qualification
-  sbaFit             String?   // "504", "7a", "Unknown"
-  leadScore          Int?      // 0-100
-  dealStage          String?   // "Prospecting", "Qualified", "Proposal", "Underwriting"
-  dealStructure      Json?     // Saved sources & uses structure
-  qualificationData  Json?     // BDO Checklist State
-  
+  sbaFit            String? // "504", "7a", "Unknown"
+  leadScore         Int? // 0-100
+  dealStage         String? // "Prospecting", "Qualified", "Proposal", "Underwriting"
+  dealStructure     Json? // Saved sources & uses structure
+  qualificationData Json? // BDO Checklist State
+
   // Timestamps
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

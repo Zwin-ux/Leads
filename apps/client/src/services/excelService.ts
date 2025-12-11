@@ -58,10 +58,14 @@ export class ExcelService {
             const lead: Partial<Lead> = {};
             // Map values to fields
             Object.keys(mapping).forEach(key => {
-                const headerName = (mapping as any)[key];
-                const index = headers.indexOf(headerName);
-                if (index !== -1) {
-                    (lead as any)[key] = values[index];
+                const headerName = mapping[key as keyof ColumnMapping];
+                if (headerName) {
+                    const index = headers.indexOf(headerName);
+                    if (index !== -1) {
+                         const leadKey = key as keyof Lead;
+                         // specific fix to avoid any, assuming Lead properties allow the value type (usually string)
+                        lead[leadKey] = values[index];
+                    }
                 }
             });
             return lead;

@@ -1,17 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { enrichmentService, type BusinessEntityEnriched } from '../services/enrichmentService';
+import React from 'react';
+import { enrichmentService } from '../services/enrichmentService';
 
 interface DealEnrichmentCardProps {
     leadId: string;
 }
 
 export const DealEnrichmentCard: React.FC<DealEnrichmentCardProps> = ({ leadId }) => {
-    const [data, setData] = useState<BusinessEntityEnriched | null>(null);
-
-    useEffect(() => {
+    const data = React.useMemo(() => {
         const enriched = enrichmentService.getEnrichedData(leadId);
         console.log(`[Card] Enriched Data for ${leadId}:`, enriched);
-        setData(enriched);
+        return enriched;
     }, [leadId]);
 
     if (!data) return null;
