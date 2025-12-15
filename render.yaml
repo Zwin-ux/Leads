@@ -1,0 +1,51 @@
+services:
+  # --------------------------------------------------------------------------------
+  # API Service (Node.js)
+  # --------------------------------------------------------------------------------
+  - type: web
+    name: leads-api
+    runtime: node
+    plan: starter # Use 'free' if preferred, but starter is better for production
+    region: oregon # Or your preferred region
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start -w apps/api
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: leads-db
+          property: connectionString
+      - key: PORT
+        value: 10000
+    # Add other secrets (like API keys) in the Render Dashboard
+
+  # --------------------------------------------------------------------------------
+  # Client App (Static Site)
+  # --------------------------------------------------------------------------------
+  - type: static
+    name: leads-client
+    runtime: static
+    buildCommand: npm ci && npm run build
+    publishDir: apps/client/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: leads-api
+          property: url
+      # Add other secrets (VITE_GOOGLE_PLACES_API_KEY, etc.) in the Render Dashboard
+
+databases:
+  # --------------------------------------------------------------------------------
+  # Postgres Database
+  # --------------------------------------------------------------------------------
+  - name: leads-db
+    plan: free # Or 'starter' for more storage/backups
+    region: oregon
+    databaseName: leads
+    user: leads_user
