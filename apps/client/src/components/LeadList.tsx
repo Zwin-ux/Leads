@@ -6,12 +6,10 @@ import { authService } from '../services/authService';
 import LeadDetailModal from './LeadDetailModal';
 import AddLeadForm from './AddLeadForm';
 import DropZone from './DropZone';
-import { LeadScout } from './LeadScout';
 import TransferLeadModal from './TransferLeadModal';
 import { BankerRolodex } from './BankerRolodex';
 import { MainDashboard } from './MainDashboard';
 import { IntegrationsPanel } from './IntegrationsPanel';
-import { AdGenerator } from './AdGenerator';
 import { SkeletonLoader } from './SkeletonLoader';
 import { ErrorBoundary } from './ErrorBoundary';
 
@@ -95,16 +93,7 @@ const LeadList: React.FC = () => {
         }
     };
 
-    const handleAddFromGenerator = async (lead: Lead) => {
-        try {
-            const newLead = await apiService.createLead(lead);
-            setLeads([...leads, newLead]);
-            setViewMode('list'); // Switch back to list to see the new lead
-        } catch (err) {
-            console.error("Failed to create lead", err);
-            alert("Failed to create lead");
-        }
-    };
+
 
     const handleTransfer = async (leadId: string, newOwner: string, message: string, type: 'transfer' | 'collaborate') => {
         const lead = leads.find(l => l.id === leadId);
@@ -243,14 +232,7 @@ const LeadList: React.FC = () => {
         return <SkeletonLoader />;
     }
 
-    if (viewMode === 'generator') {
-        return (
-            <LeadScout
-                onAddLead={handleAddFromGenerator}
-                onCancel={() => setViewMode('dashboard')}
-            />
-        );
-    }
+
 
     // ... existing view modes ...
     if (viewMode === 'bankers') {
@@ -265,9 +247,7 @@ const LeadList: React.FC = () => {
         return <IntegrationsPanel onBack={() => setViewMode('dashboard')} />;
     }
 
-    if (viewMode === 'ad_generator') {
-        return <AdGenerator onBack={() => setViewMode('dashboard')} />;
-    }
+
 
     // ... existing imports ...
 

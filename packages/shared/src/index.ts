@@ -90,6 +90,14 @@ export type DealStage =
 // User roles for permission control
 export type UserRole = 'bdo' | 'loan_officer' | 'processor' | 'underwriter' | 'manager' | 'admin';
 
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+    title?: string;
+    role: string;
+}
+
 // ============================================
 // SBA 504 LOAN MANAGEMENT TYPES
 // ============================================

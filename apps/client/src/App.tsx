@@ -4,7 +4,6 @@ import type { User } from "./services/authService";
 import LeadDetail from "./components/LeadDetail";
 import LeadList from "./components/LeadList";
 import { ProcessingQueueView } from "./views/ProcessingQueueView";
-import { DevRoleSwitcher } from "./components/DevRoleSwitcher";
 import { FeedbackWidget } from "./components/FeedbackWidget";
 import OutlookSidecar from "./pages/OutlookSidecar";
 import logo from "./assets/ampac-logo-v2.png";
@@ -185,7 +184,7 @@ function App() {
             currentView === 'processing' ? <ProcessingQueueView /> : <LeadList />
           )}
 
-          <DevRoleSwitcher />
+
           <FeedbackWidget />
         </>
       )}

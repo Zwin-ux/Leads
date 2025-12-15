@@ -7,8 +7,17 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // url      = env("DATABASE_URL")
-  // Note: Prisma is currently unused in favor of native Cosmos SDK.
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    String  @id @default(uuid())
+  name  String // e.g. "Hilda Kennedy"
+  email String  @unique
+  title String?
+  role  String  @default("sales") // sales, admin
+
+  leads Lead[]
 }
 
 model Lead {
@@ -32,24 +41,43 @@ model Lead {
   // Flexible Data (Financials, AI Analysis, Stips)
   // We use JSONB to match the previous NoSQL structure purely for speed of migration.
   // In the future, we can normalize these into separate tables.
-  financials Json?
-  aiAnalysis Json?
-  stips      Json?
+  financials String? // SQLite stores JSON as String
+  aiAnalysis String? // SQLite stores JSON as String
+  stips      String? // SQLite stores JSON as String
 
   // Processing Workflow
   processorId        String?
   processingPriority String?
   targetClosingDate  String?
-  closingItems       Json?
+  closingItems       String? // SQLite stores JSON as String
 
   // BDO / Qualification
   sbaFit            String? // "504", "7a", "Unknown"
   leadScore         Int? // 0-100
   dealStage         String? // "Prospecting", "Qualified", "Proposal", "Underwriting"
-  dealStructure     Json? // Saved sources & uses structure
-  qualificationData Json? // BDO Checklist State
+  dealStructure     String? // SQLite stores JSON as String
+  qualificationData String? // SQLite stores JSON as String
+
+  // Relations
+  assignedToId String?
+  assignedTo   User?      @relation(fields: [assignedToId], references: [id])
+  emails       EmailLog[]
 
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Amounts
+  loanAmount    Float?
+  annualRevenue Float?
+}
+
+model EmailLog {
+  id      String   @id @default(uuid())
+  leadId  String
+  lead    Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  subject String
+  body    String
+  sentAt  DateTime @default(now())
+  sender  String? // e.g. "ed.ryan@ampac.com"
 }
